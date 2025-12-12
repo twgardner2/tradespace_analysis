@@ -24,17 +24,7 @@ for altitude in altitudes:
         for sensor in sensors:
             # print(f'alt: {altitude}, mach: {mach}, sensor: {sensor}')
             result = lib.evaluate_aircraft(lib.Aircraft(altitude, mach, sensor), lib.AOI_LENGTH_BY_WIDTH)
-            flight_time, ac_endurance, ac_cost = result
-
-            results.append({
-                'altitude': altitude,
-                'mach': mach,
-                'sensor': sensor.name,
-                'flight_time': flight_time,
-                'ac_endurance': ac_endurance,
-                'ac_cost': ac_cost
-            })
-            # print(result)
+            results.append(result)
 
 fieldnames = ['altitude', 'mach', 'sensor', 'flight_time', 'ac_endurance', 'ac_cost']
 

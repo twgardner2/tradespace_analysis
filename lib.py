@@ -140,9 +140,19 @@ def evaluate_aircraft(ac: Aircraft, aoi: tuple[float, float]) -> tuple[float, fl
 
     # endurance
     ac_endurance = endurance(ac.mach, ac.alt_m)
+
+    result = {
+        'altitude':          ac.alt_kft,
+        'mach':                 ac.mach,
+        'sensor':             ac.sensor.name,
+        'flight_time':      round(flight_time, 2),
+        'ac_endurance':    round(ac_endurance, 2),
+        'ac_cost':              round(ac_cost, 2),
+
+    }
     
     
-    return (flight_time, ac_endurance, ac_cost)
+    return (result)
 
 # print(Sensor.Low)
 # print(Sensor.Med)
