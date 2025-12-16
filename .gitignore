@@ -3,3 +3,4 @@
 *.csv
 /brief
 /__pycache__
+.Rhistory
