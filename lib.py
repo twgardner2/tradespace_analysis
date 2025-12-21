@@ -19,7 +19,10 @@ LOW_SENSOR_FOV_DEG  = (15, 15)
 MED_SENSOR_FOV_DEG  = (30, 30)
 HIGH_SENSOR_FOV_DEG = (60, 60)
 
-JOHNSON_CRITERIA = 8
+# JOHNSON_CRITERIA = 2 # Recognize
+JOHNSON_CRITERIA = 8 # Identify
+# JOHNSON_CRITERIA = 13 # Classify
+# JOHNSON_CRITERIA = 4 # Testing
 
 MACH_IN_M_PER_HR = 1.235e6
 
@@ -114,6 +117,8 @@ class Aircraft():
         self.downtrack_range = tuple([ground*math.cos(fov/2) for (ground, fov) in zip(self.ground_range, self.sensor.fov_rad)])
         self.beam_width = tuple([2*ground*math.sin(fov/2) for (ground, fov) in zip(self.ground_range, self.sensor.fov_rad)])
 
+        self.valid = min(self.sensor.slant_range) > self.alt_m
+
 
     def __str__(self) -> str:
         return(f'''{self.alt_kft}kft/{self.mach}M/{self.sensor}''')
@@ -136,6 +141,7 @@ def endurance(mach: float, alt_m: float) -> float:
 
     alt_kft = alt_m*3.28084/1000
     return -18.75*mach**2 + 8.0893*mach + 0.01*alt_kft**2 + 0.05*alt_kft + 9.2105
+
 
 def cost(mach: float, alt_m: float, sensor: Sensor) -> float:
     '''
@@ -165,7 +171,87 @@ def cost(mach: float, alt_m: float, sensor: Sensor) -> float:
     alt_kft = alt_m*3.28084/1000
     return 50*mach**2 - 35*mach + 0.03*alt_kft**2 - 0.2*alt_kft + 11 + sensor_cost
 
+
+def turn_radius(mach: float, bank_angle_rad: float):
+    '''
+    Calculates aircraft turning radius for a coordinated, level turn.
+
+    Args:
+        mach (float): aircraft speed in mach.
+        bank_angle_rad (float): bank angle in radians for the turn.
+
+    Returns:
+        float: radius of turn circle.
+    '''
+    return (343*mach)**2/9.8/math.tan(bank_angle_rad)
+
+
+def const_turn_time(mach: float, bank_angle_rad: float, arc_angle_rad: float):
+    '''
+    Calculates time elapsed for aircraft to turn arc_angle_rad radians around a
+    coordinated, level turn at a given speed and bank angle.
+
+    Args:
+        mach (float): aircraft speed in mach.
+        bank_angle_rad (float): bank angle in radians for the turn.
+
+    Returns:
+        float: radius of turn circle.
+    '''
+
+    return arc_angle_rad*343*mach/9.8/math.tan(bank_angle_rad)
+
+def execute_turn(ac: Aircraft, lateral_offset: float):
+    '''
+    Determines how the aircraft will execute a the turn from the end of one leg
+    to the beginning of the next. Assumes aircraft maneuvers at 70% of cruise 
+    speed and turns with 35 deg bank angle.
+    
+    Args:
+        ac (Aircraft): aircraft making the turn.
+        lateral_offset (float): required lateral offset for start of next leg.
+
+    Returns:
+        float: time, in hr, required to execute a reversal of heading with required 
+        lateral offset.
+    '''
+
+    MANX_SPEED_COEFFICIENT = 0.7
+    MANX_BANK_ANGLE_RAD = 35 *2*math.pi/360
+    MANX_MACH = MANX_SPEED_COEFFICIENT*ac.mach
+
+    ac_manx_turn_radius = turn_radius(MANX_MACH, MANX_BANK_ANGLE_RAD)
+
+    if lateral_offset >= 2*ac_manx_turn_radius:
+        # Lateral offset is on or outside the coordinated, level turn radius. 
+        # If outside, add straight segment halfway through turn.
+        length_of_straight_segment = lateral_offset - 2*ac_manx_turn_radius
+        time_on_straight_segment = length_of_straight_segment/MANX_MACH/343
+        time_on_turn = const_turn_time(MANX_SPEED_COEFFICIENT*ac.mach, MANX_BANK_ANGLE_RAD, math.pi) 
+        total_time = time_on_straight_segment + time_on_turn
+
+        answer = total_time
+
+    else: 
+        # Need less lateral offset than constant turn results in. Assume aircraft
+        # snaps onto and off of it's maneuvering turn circle. Fly the arc distance 
+        # around the circle until it comes around to the other side of a chord 
+        # the distance of the required offset. That is, fly more than half the 
+        # circle to achieve less lateral offset than twice the radius while getting
+        # turned around to perform the next leg. 
+        angle_of_travel_around_circle = 2*(math.pi - math.asin(lateral_offset/2/ac_manx_turn_radius))
+        time_on_turn = const_turn_time(MANX_SPEED_COEFFICIENT*ac.mach, MANX_BANK_ANGLE_RAD, angle_of_travel_around_circle) 
+        
+        answer = time_on_turn
+
+    return answer/3600
+    
+
+
+    
+
 def evaluate_aircraft(ac: Aircraft, aoi: tuple[float, float]) -> tuple[float, float, float]:
+    print(ac.valid)
    
     # Calc length of each leg - how much of the length of the box do we have to 
     # fly to detect target at the edge. Limiting case is a target showing an aspect
@@ -175,14 +261,19 @@ def evaluate_aircraft(ac: Aircraft, aoi: tuple[float, float]) -> tuple[float, fl
     # Check if overlap of successive legs is necessary:
     # Limiting cases to consider:
     ##   - design target traveling perpendicular to ac's track: makes most progress
-    ##     across legs ac is searching, could evade detection if made it far enough 
+    ##     across legs ac is searching, could evade detection if made it entirely 
     ##     across tracks while ac is traveling down and back. However, displays
     ##     horizontal dimension and is detectable from further away.
     
     ### time between when this target is barely missed and when ac would 
     ### potentially see it on the next leg. The time to make a full leg, plus
-    ### the time to drive the next leg to the beaming target detection range
-    time = (2*leg_length-ac.ground_range[0])/ac.mach/MACH_IN_M_PER_HR
+    ### time to turn around (approx because we don't know the exact overlap 
+    ### required yet), plus the time to drive the next leg to the beaming target
+    ### detection range
+    time_downtrack = (2*leg_length-ac.ground_range[0])/ac.mach/MACH_IN_M_PER_HR
+    time_turning = execute_turn(ac, ac.beam_width[1])
+    time = time_downtrack + time_turning
+
     tgt_dist_travelled_cross_track = time * ac.sensor.tgt_speed * 1852
     overlap1 = tgt_dist_travelled_cross_track - (ac.ground_range[0]-ac.ground_range[1])
     overlap1 = 0 if overlap1 < 0 else overlap1
@@ -190,53 +281,60 @@ def evaluate_aircraft(ac: Aircraft, aoi: tuple[float, float]) -> tuple[float, fl
 
     ##   - design target traveling across ac's legs at an aspect where the horizontal
     ##     dimension presented is equal to the height - minimal detection range 
-    ##     while still traveling across ac's legs and could evade detection in worst
-    ##     case. 
+    ##     while still traveling across ac's legs and could potentially evade 
+    ##     detection in worst case. 
 
     aob = math.acos(ac.sensor.tgt_dims[1]/ac.sensor.tgt_dims[0])
     tgt_speed_cross_track = ac.sensor.tgt_speed * math.cos(aob)
-    overlap2 = tgt_speed_cross_track * 1852 * (2*leg_length-ac.ground_range[1])/ac.mach/MACH_IN_M_PER_HR
+
+    time_downtrack = (2*leg_length-ac.ground_range[1])/ac.mach/MACH_IN_M_PER_HR
+    time_turning = execute_turn(ac, ac.beam_width[1])
+    time = time_downtrack + time_turning
+
+    overlap2 = tgt_speed_cross_track * 1852 * time
+    
+    overlap = max(overlap1, overlap2)
+
+    sweep_width = ac.beam_width[1] - overlap
+    print(f'sweep_width: {sweep_width:0.1f} = {ac.beam_width[1]:0.1f}-{overlap:0.1f}')
+    
+    # Calc number of legs (n_legs) required to search AOI
+    n_legs = math.ceil(aoi[1]/sweep_width) if sweep_width > 0 else None
     
 
-     
-    
-    # Calc number of legs
-    # Overlap to account for worst-case, cross-track VOI
-    time_spent_on_leg = leg_length / ac.mach / MACH_IN_M_PER_HR
-    effective_sensor_width = ac.sensor_width() - 2*(TARGET_MAX_SPEED_KTS*1852)*time_spent_on_leg
-    n_legs = aoi[1]/effective_sensor_width
-    
 
-    # time spent on leg
+    # # time spent on leg
 
-    # calc time to complete legs
-    flight_distance = INGRESS_RANGE + EGRESS_RANGE + n_legs*leg_length + aoi[0]
-    flight_time = flight_distance/(ac.mach * MACH_IN_M_PER_HR)
+    # # calc time to complete legs
+    # flight_distance = INGRESS_RANGE + EGRESS_RANGE + n_legs*leg_length + aoi[0]
+    # flight_time = flight_distance/(ac.mach * MACH_IN_M_PER_HR)
 
-    # calc # sorties required
+    # # calc # sorties required
 
-    # calc cost
-    ac_cost = cost(ac.mach, ac.alt_m, ac.sensor)
+    # # calc cost
+    # ac_cost = cost(ac.mach, ac.alt_m, ac.sensor)
 
-    # endurance
-    ac_endurance = endurance(ac.mach, ac.alt_m)
+    # # endurance
+    # ac_endurance = endurance(ac.mach, ac.alt_m)
 
     result = {
-        'altitude':          ac.alt_kft,
-        'mach':                 ac.mach,
-        'sensor':             ac.sensor.name,
-        'flight_time':      round(flight_time, 2),
-        'ac_endurance':    round(ac_endurance, 2),
-        'ac_cost':              round(ac_cost, 2),
+        'altitude':         ac.alt_kft,
+        'mach':             ac.mach,
+        'sensor':           ac.sensor.name,
+        'sweep_width':      round(sweep_width,2),
+        'n_legs':           round(n_legs,2),
+        # 'flight_time':      round(flight_time, 2),
+        # 'ac_endurance':    round(ac_endurance, 2),
+        # 'ac_cost':              round(ac_cost, 2),
 
     }
     
     
     return (result)
 
-# print(Sensor.Low)
-# print(Sensor.Med)
-# print(Sensor.High)
+print(Sensor.Low)
+print(Sensor.Med)
+print(Sensor.High)
 
 
 

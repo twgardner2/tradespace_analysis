@@ -1,14 +1,15 @@
 library(tidyverse)
 
-setwd('/home/tom/Documents/anduril_interview/')
+setwd('/home/tom/Documents/interview/')
 
 df <- readr::read_csv('./output.csv') %>% 
   mutate(sensor = factor(sensor, levels=c('Low', 'Med', 'High')))
 # print(df)
 
-p <- ggplot(data=df, mapping=aes(x=flight_time, y=ac_cost, fill=sensor)) +
+p <- ggplot(data=df, mapping=aes(x=sensor, y=n_legs, fill=sensor)) +
   # geom_col(width=10) +
   geom_point(size=2, shape=21) +
+  geom_col() +
   scale_fill_manual(
     values = c('Low'='blue', 'Med'='green', 'High'='red')
   ) +
