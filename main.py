@@ -13,17 +13,6 @@ INGRESS_RANGE = 100_000 # m
 EGRESS_RANGE = 100_000 # m
 
 # Design parameters
-# TARGET_DIMENSION = (150, 40) # horizontal, vertical
-TARGET_DIMENSION = (150, 50) # horizontal, vertical
-TARGET_MAX_SPEED_KTS = 25 # knots
-
-# LOW_SENSOR_RESOLUTION = (480, 480) # horizontal, vertical
-# MED_SENSOR_RESOLUTION = (1024, 1024) # horizontal, vertical
-# HIGH_SENSOR_RESOLUTION = (2048, 2048) # horizontal, vertical
-
-# LOW_SENSOR_FOV_DEG  = (15, 15)
-# MED_SENSOR_FOV_DEG  = (30, 30)
-# HIGH_SENSOR_FOV_DEG = (60, 60)
 
 # JOHNSON_CRITERIA = 2 # Recognize
 JOHNSON_CRITERIA = 8 # Identify
@@ -33,7 +22,7 @@ JOHNSON_CRITERIA = 8 # Identify
 
 TARGET = DesignTarget(
     type      = "Frigate",
-    dims      = (150, 40), # horizontal, vertical
+    dims      = (150, 40), # m, (horizontal, vertical)
     max_speed = 25 # knots
 )
 
