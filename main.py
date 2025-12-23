@@ -1,7 +1,6 @@
 import csv
 import subprocess
 import sys
-from dataclasses import dataclass
 from constants import *
 from lib import determine_sensor_performance
 
