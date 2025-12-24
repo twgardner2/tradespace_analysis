@@ -68,6 +68,9 @@ class Config:
 
 @dataclass
 class ModelResult:
+    config: Config
+    valid: bool = None
+    reason: str = None
     sensor_perfomance: SensorPerformance = None
     detection_downtrack_range: tuple[float, float] = (None, None)
     detection_crosstrack_width: tuple[float, float] = (None, None)

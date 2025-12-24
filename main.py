@@ -2,7 +2,7 @@ import csv
 import subprocess
 import sys
 from constants import *
-from lib import determine_sensor_performance
+from lib import validate_config, determine_sensor_performance
 
 
 # Assumptions/givens
@@ -54,7 +54,16 @@ def evaluate_config(config: Config) -> tuple[float, float, float]:
     # fly to detect target at the edge. Limiting case is a target showing an aspect
     # where the height is the largest dimension we see
 
-    result = ModelResult()
+    result = ModelResult(config=config)
+    # result.config = config
+
+    config_valid, reason = validate_config(config)
+    if not config_valid:
+        result.valid = config_valid
+        result.reason = reason
+        return result 
+
+    
 
     # Instantiate the aircraft
     ac = Aircraft(config.altitude_kft, config.mach, config.sensor, config.sensor_assumption)

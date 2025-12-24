@@ -2,6 +2,13 @@ import math
 from constants import *
 
 
+def validate_config(config: Config) -> tuple[bool, str]:
+
+    if config.sensor_assumption.johnson_req <= 0:
+        return((False, f'Johnson Criteria must be > 0, is {config.sensor_assumption.johnson_req}'))
+
+    return (True, None)
+
 def endurance(mach: float, alt_m: float) -> float:
     '''
     Calculates aircraft endurance in hours.
