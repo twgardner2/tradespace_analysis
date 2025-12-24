@@ -1,11 +1,48 @@
 import math
+from dataclasses import fields
 from constants import *
 
 
 def validate_config(config: Config) -> tuple[bool, str]:
+    '''
+    Run basic validation on the config object. 
+
+    Args:
+    config: Config. The configuration object
+
+    Returns:
+    tuple[bool, str]. Whether is valid and, if not, why.
+
+    TODO: check all aspects of config, return a report of everything that's 
+    invalid, rather short-circuiting when first invalid aspect is found.
+    '''
 
     if config.sensor_assumption.johnson_req <= 0:
         return((False, f'Johnson Criteria must be > 0, is {config.sensor_assumption.johnson_req}'))
+
+    if any([res <= 0 for res in config.sensor_assumption.resolution]):
+        return((False, f'Resolution value must be > 0, is {config.sensor_assumption.resolution}'))
+
+    if any([fov <= 0 for fov in config.sensor_assumption.fov_deg]):
+        return((False, f'FOV value must be > 0, is {config.sensor_assumption.fov_deg}'))
+
+    if config.mach <= 0:
+        return((False, f'Mach value must be > 0, is {config.mach}'))
+
+    if config.altitude_kft <= 0:
+        return((False, f'Altitude value must be > 0, is {config.altitude_kft}'))
+    
+    for field in fields(config.aoi):
+        value = getattr(config.aoi, field.name)
+        if value <= 0:
+            return((False, f'AOI values must all be > 0, are {config.aoi}'))
+        
+    if any([dim <= 0 for dim in config.target.dims]):
+        return((False, f'Target dims must be > 0, are {config.target.dims}'))
+    
+    if config.target.max_speed <= 0:
+        return((False, f'Target speed value must be > 0, is {config.target.max_speed}'))
+
 
     return (True, None)
 
