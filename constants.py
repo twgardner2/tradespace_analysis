@@ -15,6 +15,13 @@ class DesignTarget:
     max_speed: float # knots
 
 @dataclass(frozen=True)
+class AOI:
+    length:  float # meters
+    width:   float # meters
+    ingress: float # meters
+    egress:  float # meters
+
+@dataclass(frozen=True)
 class SensorAssumption:
     fov_deg: tuple[float, float]
     resolution: tuple[int, int]
@@ -57,9 +64,7 @@ class Config:
     mach: float
     sensor: Sensor
     sensor_assumption: SensorAssumption
-    ingress_range: float
-    egress_range: float
-    aoi_l_by_w: tuple[float, float]
+    aoi: AOI
 
 @dataclass
 class ModelResult:

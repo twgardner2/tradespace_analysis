@@ -6,11 +6,12 @@ from lib import determine_sensor_performance
 
 
 # Assumptions/givens
-MARITIME_AOI_LENGTH = 100_000 # m
-MARITIME_AOI_WIDTH  = 100_000 # m
-AOI_LENGTH_BY_WIDTH = (MARITIME_AOI_LENGTH, MARITIME_AOI_WIDTH)
-INGRESS_RANGE = 100_000 # m
-EGRESS_RANGE = 100_000 # m
+AOI = AOI(
+    length  = 100_000, # meters
+    width   = 100_000, # meters
+    ingress = 100_000, # meters
+    egress  = 100_000 # meters
+)
 
 # Design parameters
 
@@ -170,14 +171,12 @@ def main():
         for mach in machs:
             for sensor in sensors:
                 config = Config(
-                    target = TARGET,
-                    altitude_kft = altitude,
-                    mach = mach,
-                    sensor = sensor,
+                    target            = TARGET,
+                    altitude_kft      = altitude,
+                    mach              = mach,
+                    sensor            = sensor,
                     sensor_assumption = SENSOR_ASSUMPTIONS[sensor],
-                    ingress_range=INGRESS_RANGE,
-                    egress_range=EGRESS_RANGE,
-                    aoi_l_by_w=AOI_LENGTH_BY_WIDTH
+                    aoi               = AOI
                 )
                 print('-------')
 
