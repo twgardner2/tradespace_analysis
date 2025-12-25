@@ -2,7 +2,7 @@ import csv
 import subprocess
 import sys
 from constants import *
-from lib import validate_config, determine_sensor_performance
+from lib import validate_config, calc_sensor_performance, calc_search_performance
 
 
 # Assumptions/givens
@@ -14,6 +14,10 @@ AOI = AOI(
 )
 
 # Design parameters
+# altitudes = range(5,30,5)
+altitudes = [100]
+machs     = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
 # JOHNSON_CRITERIA = 2 # Recognize
 JOHNSON_CRITERIA = 8 # Identify
@@ -48,14 +52,26 @@ SENSOR_ASSUMPTIONS = {
     ),
 }
 
-# def evaluate_aircraft(ac: Aircraft, aoi: tuple[float, float]) -> tuple[float, float, float]:
-def evaluate_config(config: Config) -> tuple[float, float, float]:
+def evaluate_config(config: Config) -> ModelResult:
+    '''
+    Given a particular configuration of the scenario, perform calculations to 
+    determine aircraft/sensor performance.
+
+    Args:
+    config: Config: instance of the Config dataclass specifying all necessary
+    attributes of the scenario to do calculations
+
+    Returns:
+    ModelResult: instance of ModelResult dataclass containing the Config (inputs)
+    used to calculate this result, along with intermediate and final calculations
+    
+    '''
     # Calc length of each leg - how much of the length of the box do we have to 
     # fly to detect target at the edge. Limiting case is a target showing an aspect
     # where the height is the largest dimension we see
 
+    # region: Validate config ----
     result = ModelResult(config=config)
-    # result.config = config
 
     config_valid, reason = validate_config(config)
     if not config_valid:
@@ -63,13 +79,35 @@ def evaluate_config(config: Config) -> tuple[float, float, float]:
         result.reason = reason
         return result 
 
-    
+    # endregion ----
 
     # Instantiate the aircraft
-    ac = Aircraft(config.altitude_kft, config.mach, config.sensor, config.sensor_assumption)
+    ac = Aircraft(
+        config.altitude_kft, 
+        config.mach, 
+        config.sensor, 
+        config.sensor_assumption
+    )
 
-    # Determine sensor performance
-    result.sensor_performance = determine_sensor_performance(config.sensor_assumption, config.target)
+    # Calc sensor performance
+    result.sensor_performance = calc_sensor_performance(
+        config.sensor_assumption, 
+        config.target
+    )
+    # Calc aircraft sensor coverage
+    result.aircraft_search_performance = calc_search_performance(
+        config.altitude_kft * 1000 / FEET_PER_METER,
+        result.sensor_performance.slant_detection_range,
+        fov_rad = tuple([fov_deg * RAD_PER_DEG for fov_deg in config.sensor_assumption.fov_deg])
+    )
+
+    if not result.aircraft_search_performance.valid:
+        result.valid = False
+        result.reason = result.aircraft_search_performance.reason
+        return(result)
+
+
+    return(result)
 
     if ac.downtrack_range[1].valid:
         leg_length = Result(
@@ -169,11 +207,6 @@ def main():
     # altitudes = range(15,20,5)
     # machs     = [0.6]
     # sensors   = [lib.Sensor['Med']]
-
-    altitudes = range(5,30,5)
-    altitudes = [100]
-    machs     = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
     results = []
     for altitude in altitudes:

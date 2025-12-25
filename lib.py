@@ -46,6 +46,7 @@ def validate_config(config: Config) -> tuple[bool, str]:
 
     return (True, None)
 
+
 def endurance(mach: float, alt_m: float) -> float:
     '''
     Calculates aircraft endurance in hours.
@@ -170,7 +171,7 @@ def execute_turn(ac: Aircraft, lateral_offset: float):
     return answer/3600
     
 
-def determine_sensor_performance(sensor_assumption: SensorAssumption,
+def calc_sensor_performance(sensor_assumption: SensorAssumption,
                           target: DesignTarget) -> SensorPerformance:
     
     # fov_rad: tuple of (horizontal fov in rad, vertical fov in rad)
@@ -185,10 +186,8 @@ def determine_sensor_performance(sensor_assumption: SensorAssumption,
     gsd = tuple([tgt_dim/sensor_assumption.johnson_req for tgt_dim in target.dims])
 
     # slant_range at which we detect target: 
-    # tuple (slant range vs horizontal dimension, slant range vs. vertical dimension)
+    # tuple of (slant range vs horizontal dimension, slant range vs. vertical dimension)
     slant_range = tuple([gsd/ifov for (gsd,ifov) in zip(gsd, ifov_rad)])
-
-    # return(slant_range)
 
     return(
         SensorPerformance(
@@ -197,3 +196,25 @@ def determine_sensor_performance(sensor_assumption: SensorAssumption,
     )
 
 
+def calc_search_performance(
+        alt_m: float, 
+        slant_det_range: tuple[float, float],
+        fov_rad: tuple[float, float]
+    ) -> AircraftSearchPerformance:
+    
+    if any([(alt_m-slant)>0 for slant in slant_det_range]):
+        result = AircraftSearchPerformance(valid=False, reason='Alt > Slant detection range')
+        return result
+
+
+    ground_detection_range = tuple([(slant**2-alt_m**2)**0.5 for slant in slant_det_range])
+    downtrack_detection_range = tuple([ground * math.cos(fov_rad[0]/2) for ground in ground_detection_range])#####!!!!!!!!!!!!!
+    crosstrack_detection_width = tuple([2 * ground * math.sin(fov_rad[0]/2) for ground in ground_detection_range])
+    
+    result = AircraftSearchPerformance(
+        valid = True,
+        ground_detection_range = ground_detection_range,
+        downtrack_detection_range = downtrack_detection_range,
+        crosstrack_detection_width = crosstrack_detection_width,
+    )
+    return result
