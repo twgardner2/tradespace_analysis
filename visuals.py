@@ -75,29 +75,35 @@ class BaseScene(Scene):
         self.add(lane_boundaries, flight_paths)
 
 
+class UAV(VGroup):
+
+    def __init__(self, lane_width, **kwargs):
+        super().__init__(**kwargs)
+
+        # Create the UAV as a triangle
+        self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*lane_width)
+
+        # Create the sensor field of view as a cone
+        self.fov = VGroup(
+            Polygon(
+                self.uav.get_top(), self.uav.get_top() + UP * 1.5 + LEFT * 0.5, self.uav.get_top() + UP * 1.5 + RIGHT * 0.5,
+                stroke_color=YELLOW
+            ).set_fill(YELLOW, opacity=0.15)
+        )
+
+        # Group UAV and FOV
+        self.add(self.uav, self.fov)
+
 
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
-        # Create the UAV as a triangle
-        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*self.lane_width)
 
-        # Create the sensor field of view as a cone
-        fov = VGroup(
-            Line(start=uav.get_top(), end=uav.get_center() + UP * 1.5 + LEFT * 0.5, color=YELLOW),
-            Line(start=uav.get_top(), end=uav.get_center() + UP * 1.5 + RIGHT * 0.5, color=YELLOW),
-            Line(start=uav.get_center() + UP * 1.5 + LEFT * 0.5,
-                end=uav.get_center() + UP * 1.5 + RIGHT * 0.5,
-                color=YELLOW
-            )
-        )
-
-        # Group UAV and FOV
-        uav_group = VGroup(uav, fov)
         # Add UAV and FOV to the scene
+        uav_group = UAV(lane_width=self.lane_width)
         self.add(uav_group)
 
-        dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
+        dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
         start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
         end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
         turn_rotation_point = ( 1*UP + 1*LEFT            )
@@ -123,15 +129,15 @@ class SensorGapWhenTurning(BaseScene):
 
         # Draw sensor gap
         not_covered_gap = Polygon(
-            uav.get_bottom(), 
-            uav.get_bottom() + LEFT*self.lane_width/2, 
-            uav.get_bottom() + LEFT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
+            uav_group.uav.get_bottom(), 
+            uav_group.uav.get_bottom() + LEFT*self.lane_width/2, 
+            uav_group.uav.get_bottom() + LEFT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov.get_bottom())*DOWN,
             stroke_width=0.5
         ).set_fill(WHITE, opacity=0.3)
         not_covered_level_gap = Polygon(
-            uav.get_bottom(), 
-            uav.get_bottom() + RIGHT*self.lane_width/2, 
-            uav.get_bottom() + RIGHT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
+            uav_group.uav.get_bottom(), 
+            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2, 
+            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov.get_bottom())*DOWN,
             stroke_width=0.5
         ).set_fill(WHITE, opacity=0.3)
         self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
@@ -139,9 +145,8 @@ class SensorGapWhenTurning(BaseScene):
         not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
         not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
 
-        # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
         not_covered_level_text = Paragraph(
-            'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
+            'Not Covered', 'Straight & Level', color=BLUE, font_size=20, alignment='center'
         ).next_to(self.search_area, UP).shift(1*RIGHT)
         not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
 
@@ -155,22 +160,9 @@ class SensorGapWhenTurning(BaseScene):
 class ShortLateralOffsetTurn(BaseScene):
     def construct(self):
 
-        # Create the UAV as a triangle
-        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*self.lane_width)
 
-        # Create the sensor field of view as a cone
-        fov = VGroup(
-            Line(start=uav.get_top(), end=uav.get_center() + UP * 1.5 + LEFT * 0.5, color=YELLOW),
-            Line(start=uav.get_top(), end=uav.get_center() + UP * 1.5 + RIGHT * 0.5, color=YELLOW),
-            Line(start=uav.get_center() + UP * 1.5 + LEFT * 0.5,
-                end=uav.get_center() + UP * 1.5 + RIGHT * 0.5,
-                color=YELLOW
-            )
-        )
-
-        # Group UAV and FOV
-        uav_group = VGroup(uav, fov)
-        # Add UAV and FOV to the scene
+        # Add UAV and it's FOV
+        uav_group = UAV(lane_width=self.lane_width)
         self.add(uav_group)
 
         # Calculations for S < 2R turn
@@ -197,6 +189,12 @@ class ShortLateralOffsetTurn(BaseScene):
         # end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
 
 
+        circle1 = always_redraw(
+            lambda: Circle(
+                radius = r.get_value(), 
+                color=ORANGE,
+            ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT))
+        )
         arc1 = always_redraw(
             lambda: Arc(
                 radius = r.get_value(), 
@@ -229,11 +227,10 @@ class ShortLateralOffsetTurn(BaseScene):
         arc1_radius_arrow = always_redraw(
             lambda: Arrow(
                 start = lane_boundary + (r.get_value()+s/2)*LEFT,
-                end = lane_boundary + (r.get_value()+s/2)*LEFT + r.get_value()*UP,
+                end = lane_boundary + (r.get_value()+s/2)*LEFT + r.get_value()*math.cos(get_theta1())*UP + r.get_value()*math.sin(get_theta1())*RIGHT,
                 color=ORANGE,
                 buff=0
             )
-
         )
 
         arc2 = always_redraw(
@@ -331,32 +328,6 @@ class ShortLateralOffsetTurn(BaseScene):
         #         ),
         #     )
         # )
-
-        # Draw sensor gap
-        # not_covered_gap = Polygon(
-        #     uav.get_bottom(), 
-        #     uav.get_bottom() + LEFT*self.lane_width/2, 
-        #     uav.get_bottom() + LEFT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
-        #     stroke_width=0.5
-        # ).set_fill(WHITE, opacity=0.3)
-        # not_covered_level_gap = Polygon(
-        #     uav.get_bottom(), 
-        #     uav.get_bottom() + RIGHT*self.lane_width/2, 
-        #     uav.get_bottom() + RIGHT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
-        #     stroke_width=0.5
-        # ).set_fill(WHITE, opacity=0.3)
-        # self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
-
-        # not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
-        # not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
-
-        # # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
-        # not_covered_level_text = Paragraph(
-        #     'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
-        # ).next_to(self.search_area, UP).shift(1*RIGHT)
-        # not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
-
-        # self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
 
         self.play(r.animate.set_value(1.0))
         self.play(r.animate.set_value(0.8))
