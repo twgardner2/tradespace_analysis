@@ -6,6 +6,7 @@
 
 
 from manim import *
+import math
 
 
 TEXT_WRITE_TIME = 1 # seconds
@@ -172,55 +173,193 @@ class ShortLateralOffsetTurn(BaseScene):
         # Add UAV and FOV to the scene
         self.add(uav_group)
 
-        dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
-        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
-        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
-        turn_rotation_point = ( 1*UP + 1*LEFT            )
-        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
+        # Calculations for S < 2R turn
+        s = 1
+        r = ValueTracker(0.6)
+
+        def get_dist():
+            current_r = r.get_value()
+            c = 2*current_r
+            a = current_r + s/2
+            b2 = max(0, c**2 - a**2)
+            return b2**0.5
+        
+        def get_theta1():
+            current_r = r.get_value()
+            return math.acos(  (current_r + s/2   ) / ( 2*current_r  )   )
+        
+        def get_theta2():
+            return math.pi + 2*get_theta1()
+
+
+        lane_boundary = ( 1*UP + 1*LEFT            )
+        # dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
+        # end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
+
+
+        arc1 = always_redraw(
+            lambda: Arc(
+                radius = r.get_value(), 
+                color=ORANGE,
+                start_angle = 0,
+                angle = get_theta1()
+            ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT))
+        )
+        arc1_inv = always_redraw(
+            lambda: DashedVMobject(
+
+                Arc(
+                    radius = r.get_value(), 
+                    color=ORANGE,
+                    start_angle = get_theta1(),
+                    angle = 2*math.pi - get_theta1(),
+                ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT)
+                ).set_opacity(0.25),
+                num_dashes=20,
+                dashed_ratio=0.5,
+            ) 
+        )
+        arc1_center = always_redraw(
+            lambda: Dot(
+                point = lane_boundary + (r.get_value()+s/2)*LEFT,
+                color = ORANGE
+            )
+        )
+
+        arc1_radius_arrow = always_redraw(
+            lambda: Arrow(
+                start = lane_boundary + (r.get_value()+s/2)*LEFT,
+                end = lane_boundary + (r.get_value()+s/2)*LEFT + r.get_value()*UP,
+                color=ORANGE,
+                buff=0
+            )
+
+        )
+
+        arc2 = always_redraw(
+            lambda: Arc(
+                radius = r.get_value(), 
+                color=ORANGE,
+                start_angle = -get_theta1(),
+                angle = math.pi + 2*get_theta1()
+            ).shift(lane_boundary + (get_dist()*UP))
+        )
+        arc2_inv = always_redraw(
+            lambda: DashedVMobject(
+
+                Arc(
+                    radius = r.get_value(), 
+                    color=ORANGE,
+                    start_angle = math.pi + get_theta1(),
+                    angle = math.pi - 2*get_theta1(),
+                ).shift(lane_boundary + (get_dist()*UP)
+                ).set_opacity(0.25),
+                num_dashes=20,
+                dashed_ratio=0.5,
+            ) 
+        )
+        
+        arc3 = always_redraw(
+            lambda: Arc(
+                radius = r.get_value(), 
+                color=ORANGE,
+                start_angle = math.pi-get_theta1(),
+                angle = get_theta1()
+            ).shift(lane_boundary + ((r.get_value()+s/2)*RIGHT))
+        )
+        arc3_inv = always_redraw(
+            lambda: DashedVMobject(
+
+                Arc(
+                    radius = r.get_value(), 
+                    color=ORANGE,
+                    start_angle = math.pi,
+                    angle = 2*math.pi - get_theta1(),
+                ).shift(lane_boundary + ((r.get_value()+s/2)*RIGHT)
+                ).set_opacity(0.25),
+                num_dashes=20,
+                dashed_ratio=0.5,
+            ) 
+        )
+
+        r_label = DecimalNumber(
+            r.get_value(),
+            num_decimal_places=1,
+            include_sign=False,
+            color=ORANGE
+        )
+        def update_radius_label(m):
+            m.set_value(r.get_value())
+            m.next_to(arc1_radius_arrow, LEFT, buff=0.1)
+
+            def clamp(n, minimum, maximum):
+                return min(maximum, max(n, minimum))
+
+            min_text_height = 0.1
+            min_r = 1
+            max_text_height = 1
+            max_r = 6
+
+            text_height = (max_text_height-min_text_height)/(max_r-min_r)*r.get_value()
+            m.set_height(clamp(text_height, min_text_height, max_text_height))
+
+        r_label.add_updater(update_radius_label)
+
+        self.add(r, r_label)
+
+        self.add(
+            arc1, arc1_inv, arc1_center, arc1_radius_arrow,
+            arc2, arc2_inv, 
+            arc3, arc3_inv
+        )
+
 
         # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
         # self.add(turn_rot_point_dot)
 
-        self.play(
-            Succession(
-                # 1. Shift upwards
-                ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
+        # self.play(
+        #     Succession(
+        #         # 1. Shift upwards
+        #         ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
                 
-                # 2. Rotate
-                Rotate(
-                    uav_group, 
-                    angle=-PI, 
-                    about_point=turn_rotation_point,
-                    rate_func=linear
-                ),
-            )
-        )
+        #         # 2. Rotate
+        #         Rotate(
+        #             uav_group, 
+        #             angle=-PI, 
+        #             about_point=first_rotation_point,
+        #             rate_func=linear
+        #         ),
+        #     )
+        # )
 
         # Draw sensor gap
-        not_covered_gap = Polygon(
-            uav.get_bottom(), 
-            uav.get_bottom() + LEFT*self.lane_width/2, 
-            uav.get_bottom() + LEFT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
-            stroke_width=0.5
-        ).set_fill(WHITE, opacity=0.3)
-        not_covered_level_gap = Polygon(
-            uav.get_bottom(), 
-            uav.get_bottom() + RIGHT*self.lane_width/2, 
-            uav.get_bottom() + RIGHT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
-            stroke_width=0.5
-        ).set_fill(WHITE, opacity=0.3)
-        self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
+        # not_covered_gap = Polygon(
+        #     uav.get_bottom(), 
+        #     uav.get_bottom() + LEFT*self.lane_width/2, 
+        #     uav.get_bottom() + LEFT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
+        #     stroke_width=0.5
+        # ).set_fill(WHITE, opacity=0.3)
+        # not_covered_level_gap = Polygon(
+        #     uav.get_bottom(), 
+        #     uav.get_bottom() + RIGHT*self.lane_width/2, 
+        #     uav.get_bottom() + RIGHT*self.lane_width/2 + (uav.get_bottom()-fov.get_bottom())*DOWN,
+        #     stroke_width=0.5
+        # ).set_fill(WHITE, opacity=0.3)
+        # self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
 
-        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
-        not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
+        # not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
+        # not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
 
-        # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
-        not_covered_level_text = Paragraph(
-            'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
-        ).next_to(self.search_area, UP).shift(1*RIGHT)
-        not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
+        # # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
+        # not_covered_level_text = Paragraph(
+        #     'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
+        # ).next_to(self.search_area, UP).shift(1*RIGHT)
+        # not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
 
-        self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
+        # self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
 
+        self.play(r.animate.set_value(1.0))
+        self.play(r.animate.set_value(0.8))
+        self.play(r.animate.set_value(2))
         # End the animation
         self.wait(10)
