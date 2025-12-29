@@ -12,7 +12,7 @@ TEXT_WRITE_TIME = 1 # seconds
 
 class BaseScene(Scene):
     def setup(self):
-                # config.frame_height = 6
+        # config.frame_height = 6
         # config.frame_width = 8
 
         WIDTH = 4
@@ -79,7 +79,7 @@ class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
         # Create the UAV as a triangle
-        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * self.lane_width/2)
+        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*self.lane_width)
 
         # Create the sensor field of view as a cone
         fov = VGroup(
@@ -94,14 +94,13 @@ class SensorGapWhenTurning(BaseScene):
         # Group UAV and FOV
         uav_group = VGroup(uav, fov)
         # Add UAV and FOV to the scene
-        # self.play(FadeIn(uav_group))
         self.add(uav_group)
 
         dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
-        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 0.5*LEFT   )
-        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 0.5*LEFT)
-        turn_rotation_point = ( 1*UP             )
-        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 0.5*RIGHT) 
+        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
+        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
+        turn_rotation_point = ( 1*UP + 1*LEFT            )
+        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
 
         # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
         # self.add(turn_rot_point_dot)
@@ -136,19 +135,19 @@ class SensorGapWhenTurning(BaseScene):
         ).set_fill(WHITE, opacity=0.3)
         self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
 
-        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(1*LEFT + 0.15*UP)
+        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
         not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
 
         # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
         not_covered_level_text = Paragraph(
             'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
-        ).next_to(self.search_area, UP).shift(2*RIGHT)
+        ).next_to(self.search_area, UP).shift(1*RIGHT)
         not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
 
         self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
 
         # End the animation
-        self.wait(3)
+        self.wait(10)
 
 
 
@@ -156,7 +155,7 @@ class ShortLateralOffsetTurn(BaseScene):
     def construct(self):
 
         # Create the UAV as a triangle
-        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * self.lane_width/2)
+        uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*self.lane_width)
 
         # Create the sensor field of view as a cone
         fov = VGroup(
@@ -171,14 +170,13 @@ class ShortLateralOffsetTurn(BaseScene):
         # Group UAV and FOV
         uav_group = VGroup(uav, fov)
         # Add UAV and FOV to the scene
-        # self.play(FadeIn(uav_group))
         self.add(uav_group)
 
         dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
-        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 0.5*LEFT   )
-        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 0.5*LEFT)
-        turn_rotation_point = ( 1*UP             )
-        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 0.5*RIGHT) 
+        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
+        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
+        turn_rotation_point = ( 1*UP + 1*LEFT            )
+        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
 
         # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
         # self.add(turn_rot_point_dot)
@@ -213,13 +211,16 @@ class ShortLateralOffsetTurn(BaseScene):
         ).set_fill(WHITE, opacity=0.3)
         self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
 
-        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(1*LEFT)
+        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
         not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
 
-        not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
+        # not_covered_level_text = Text('Not Covered\nStraight/Level', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*RIGHT)
+        not_covered_level_text = Paragraph(
+            'Not Covered', 'Straight/Level', color=BLUE, font_size=20, alignment='center'
+        ).next_to(self.search_area, UP).shift(1*RIGHT)
         not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
 
         self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
 
         # End the animation
-        self.wait(3)
+        self.wait(10)
