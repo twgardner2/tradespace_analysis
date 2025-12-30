@@ -41,7 +41,6 @@ class AircraftSearchPerformance:
     ground_detection_range:     tuple[float, float] = None
     downtrack_detection_range:  tuple[float, float] = None
     crosstrack_detection_width: tuple[float, float] = None
-    leg_length:                 float = None
 
 @dataclass
 class Result:

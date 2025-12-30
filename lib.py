@@ -232,10 +232,6 @@ def calc_search_performance(
     downtrack_detection_range = tuple([ground * math.cos(fov_rad[0]/2) for ground in ground_detection_range])#####!!!!!!!!!!!!!
     crosstrack_detection_width = tuple([2 * ground * math.sin(fov_rad[0]/2) for ground in ground_detection_range])
 
-    # Length of a search leg is the length of the AOI minus the distance at which 
-    # the sensor detects the design target against it's height on each end (x2) 
-    leg_length = aoi.length - 2*downtrack_detection_range[1]
-
     # Determine search leg overlap required
     ## 2 limiting cases: 
     ### 1) 
@@ -245,7 +241,6 @@ def calc_search_performance(
         ground_detection_range     = ground_detection_range,
         downtrack_detection_range  = downtrack_detection_range,
         crosstrack_detection_width = crosstrack_detection_width,
-        leg_length                 = leg_length,
     )
     return result
 
