@@ -41,6 +41,7 @@ class AircraftSearchPerformance:
     ground_detection_range:     tuple[float, float] = None
     downtrack_detection_range:  tuple[float, float] = None
     crosstrack_detection_width: tuple[float, float] = None
+    leg_length:                 float = None
 
 @dataclass
 class Result:
@@ -59,6 +60,10 @@ class Sensor(Enum):
 class Aircraft:
     alt_kft: float
     mach: float
+    manx_bank_angle_rad: float
+    manx_decel_gees: float
+    manx_min_mach: float
+    manx_speed_coeff: float # TODO remove if switching to more complex turn calculation
     sensor: Sensor
     sensor_assumption: SensorAssumption
 
@@ -66,14 +71,24 @@ class Aircraft:
         pass
 
 
-
 @dataclass(frozen = True)
 class Config:
-    target: DesignTarget
+    # Aircraft
     altitude_kft: float
     mach: float
+    manx_bank_angle_rad: float
+    manx_speed_coeff: float # TODO remove if switching to more complex turn calculation
+    manx_decel_gees: float
+    manx_min_mach: float
+
+    # Sensor
     sensor: Sensor
     sensor_assumption: SensorAssumption
+
+    # Target
+    target: DesignTarget
+
+    # AOI
     aoi: AOI
 
 @dataclass
@@ -82,6 +97,7 @@ class ModelResult:
     valid: bool = None
     reason: str = None
     sensor_performance: SensorPerformance = None
-    aircraft_search_performance: AircraftSearchPerformance = None
+    ac_search_performance: AircraftSearchPerformance = None
+    ac_turn_time: float = None
     required_overlap: float = None
     effective_sweep_width: float = None

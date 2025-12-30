@@ -2,14 +2,20 @@ import csv
 import subprocess
 import sys
 from constants import *
-from lib import validate_config, calc_sensor_performance, calc_search_performance
+from lib import (
+    validate_config, 
+    calc_sensor_performance, 
+    calc_search_performance,
+    calc_coordinated_level_turnaround_time,
+    calc_coordinated_level_turnaround_time2
+)
 
 
 # Assumptions/givens
 AOI = AOI(
+    ingress = 100_000, # meters
     length  = 100_000, # meters
     width   = 100_000, # meters
-    ingress = 100_000, # meters
     egress  = 100_000 # meters
 )
 
@@ -24,6 +30,11 @@ JOHNSON_CRITERIA = 8 # Identify
 # JOHNSON_CRITERIA = 13 # Classify
 # JOHNSON_CRITERIA = 4 # Testing
 
+MANX_BANK_ANGLE_DEG = 35
+MANX_BANK_ANGLE_RAD = MANX_BANK_ANGLE_DEG * RAD_PER_DEG
+MANX_DECEL_GEES = -0.7
+MANX_MIN_MACH = 0.15
+MANX_SPEED_COEFFICIENT = 0.7 # TODO remove if switching to more complex turn calculation
 
 TARGET = DesignTarget(
     type      = "Frigate",
@@ -34,19 +45,19 @@ TARGET = DesignTarget(
 SENSOR_ASSUMPTIONS = {
     Sensor.LOW: SensorAssumption(
         fov_deg     = (15, 15),
-        resolution  = (640, 480),
+        resolution  = (640, 640),
         johnson_req = JOHNSON_CRITERIA,
         cost        = 0.05
     ),
     Sensor.MED: SensorAssumption(
         fov_deg     = (30, 30),
-        resolution  = (1024, 768),
+        resolution  = (1024, 1024),
         johnson_req = JOHNSON_CRITERIA,
         cost        = 1
     ),
     Sensor.HIGH: SensorAssumption(
         fov_deg     = (60, 60),
-        resolution  = (1920, 1080),
+        resolution  = (1920, 1920),
         johnson_req = JOHNSON_CRITERIA,
         cost        = 10
     ),
@@ -83,10 +94,14 @@ def evaluate_config(config: Config) -> ModelResult:
 
     # Instantiate the aircraft
     ac = Aircraft(
-        config.altitude_kft, 
-        config.mach, 
-        config.sensor, 
-        config.sensor_assumption
+        alt_kft             = config.altitude_kft, 
+        mach                = config.mach,
+        manx_bank_angle_rad = config.manx_bank_angle_rad,
+        manx_speed_coeff    = config.manx_speed_coeff,
+        manx_decel_gees     = config.manx_decel_gees,
+        manx_min_mach       = config.manx_min_mach,
+        sensor              = config.sensor, 
+        sensor_assumption   = config.sensor_assumption
     )
 
     # Calc sensor performance
@@ -94,17 +109,27 @@ def evaluate_config(config: Config) -> ModelResult:
         config.sensor_assumption, 
         config.target
     )
+
     # Calc aircraft sensor coverage
-    result.aircraft_search_performance = calc_search_performance(
-        config.altitude_kft * 1000 / FEET_PER_METER,
-        result.sensor_performance.slant_detection_range,
-        fov_rad = tuple([fov_deg * RAD_PER_DEG for fov_deg in config.sensor_assumption.fov_deg])
+    result.ac_search_performance = calc_search_performance(
+        alt_m           = config.altitude_kft * 1000 / FEET_PER_METER,
+        slant_det_range = result.sensor_performance.slant_detection_range,
+        fov_rad         = tuple([fov_deg * RAD_PER_DEG for fov_deg in config.sensor_assumption.fov_deg]),
+        aoi             = config.aoi
     )
 
-    if not result.aircraft_search_performance.valid:
+    if not result.ac_search_performance.valid:
         result.valid = False
-        result.reason = result.aircraft_search_performance.reason
+        result.reason = result.ac_search_performance.reason
         return(result)
+
+    # Calc time ac to reverse heading and offset for next leg with a 
+    # coordinated, level turn
+    result.ac_turn_time = calc_coordinated_level_turnaround_time2(
+        ac, 
+        result.ac_search_performance.crosstrack_detection_width[1],
+        result.ac_search_performance
+    )
 
 
     return(result)
@@ -201,24 +226,22 @@ def evaluate_config(config: Config) -> ModelResult:
 
 
 def main():
-    # result = lib.evaluate_aircraft(lib.Aircraft(5, 0.9, lib.Sensor.Low), lib.AOI_LENGTH_BY_WIDTH)
-    # print(result)
-
-    # altitudes = range(15,20,5)
-    # machs     = [0.6]
-    # sensors   = [lib.Sensor['Med']]
 
     results = []
     for altitude in altitudes:
         for mach in machs:
             for sensor in sensors:
                 config = Config(
-                    target            = TARGET,
-                    altitude_kft      = altitude,
-                    mach              = mach,
-                    sensor            = sensor,
-                    sensor_assumption = SENSOR_ASSUMPTIONS[sensor],
-                    aoi               = AOI
+                    altitude_kft        = altitude,
+                    mach                = mach,
+                    manx_bank_angle_rad = MANX_BANK_ANGLE_RAD,
+                    manx_speed_coeff    = MANX_SPEED_COEFFICIENT,
+                    manx_decel_gees     = MANX_DECEL_GEES,
+                    manx_min_mach       = MANX_MIN_MACH,
+                    sensor              = sensor,
+                    sensor_assumption   = SENSOR_ASSUMPTIONS[sensor],
+                    target              = TARGET,
+                    aoi                 = AOI
                 )
                 print('-------')
 
