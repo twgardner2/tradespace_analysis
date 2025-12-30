@@ -50,54 +50,6 @@ def validate_config(config: Config) -> tuple[bool, str]:
     return (True, None)
 
 
-def endurance(mach: float, alt_m: float) -> float:
-    '''
-    Calculates aircraft endurance in hours.
-
-    Note: The stipulated endurance model takes altitude in kft, but I plan to 
-    work in SI units, so I'm accepting meters and converting to kft.
-
-    Args:
-        mach (float): aircraft speed in mach.
-        alt_m (float): aircraft altitude in kft.
-
-    Returns:
-        float: aircraft endurance in hours.
-    '''
-
-    alt_kft = alt_m*FEET_PER_METER/1000
-    return -18.75*mach**2 + 8.0893*mach + 0.01*alt_kft**2 + 0.05*alt_kft + 9.2105
-
-
-def cost(mach: float, alt_m: float, sensor: Sensor) -> float:
-    '''
-    Calculates aircraft cost in millions of dollars.
-
-    Note: The stipulated cost model takes altitude in kft, but I plan to 
-    work in SI units, so I'm accepting meters and converting to kft.
-
-    Args:
-        mach (float): aircraft speed in mach.
-        alt_m (float): aircraft altitude in kft.
-        sensor (enum Sensor): EO/IR sensor on aircraft.
-
-    Returns:
-        float: aircraft cost in millions of dollars.
-    '''
-    
-    match sensor:
-        case Sensor.Low:
-            sensor_cost = 0.05
-        case Sensor.Med:
-            sensor_cost = 1
-        case Sensor.High:
-            sensor_cost = 10
-
-
-    alt_kft = alt_m*FEET_PER_METER/1000
-    return 50*mach**2 - 35*mach + 0.03*alt_kft**2 - 0.2*alt_kft + 11 + sensor_cost
-
-
 def turn_radius(mach: float, bank_angle_rad: float):
     '''
     Calculates aircraft turning radius for a coordinated, level turn.
