@@ -1,4 +1,5 @@
-import csv
+import pandas as pd
+from dataclasses import asdict
 import subprocess
 import sys
 from constants import *
@@ -220,6 +221,7 @@ def evaluate_config(config: Config) -> ModelResult:
 
 def main():
 
+    # Run model - evaluate_config for various inputs
     results = []
     for altitude in altitudes:
         for mach in machs:
@@ -236,26 +238,16 @@ def main():
                     target              = TARGET,
                     aoi                 = AOI
                 )
-                print('-------')
-
                 
-                # lib.evaluate_aircraft(lib.Aircraft(altitude, mach, sensor), lib.AOI_LENGTH_BY_WIDTH)
                 result = evaluate_config(config)
                 results.append(result)
 
-    sys.exit()
+    # Write results to output.csv
+    results_dicts = [asdict(r) for r in results]
+    df = pd.json_normalize(results_dicts, sep='_')
+    df.to_csv('output.csv')
 
-
-    # fieldnames = ['altitude', 'mach', 'sensor', 'flight_time', 'ac_endurance', 'ac_cost']
-    # fieldnames = ['altitude', 'mach', 'sensor', 'flight_time', 'ac_endurance', 'ac_cost']
-    fieldnames = results[0].keys()
-
-    with open('output.csv', 'w', newline='') as outfile:
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(results)
-
-
+    # Run R script to do analysis
     subprocess.call([r'Rscript', r'./plots.R'])
 
 if __name__ == '__main__':
