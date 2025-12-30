@@ -1,0 +1,9 @@
+name: interview
+channels:
+  - conda-forge
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - manim
+  - python=3.12
+prefix: /home/tom/miniconda3/envs/interview
