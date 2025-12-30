@@ -228,9 +228,9 @@ def calc_search_performance(
         return result
 
 
-    ground_detection_range = tuple([(slant**2-alt_m**2)**0.5 for slant in slant_det_range])
+    ground_detection_range    = tuple([(slant**2-alt_m**2)**0.5 for slant in slant_det_range])
     downtrack_detection_range = tuple([ground * math.cos(fov_rad[0]/2) for ground in ground_detection_range])#####!!!!!!!!!!!!!
-    crosstrack_detection_width = tuple([2 * ground * math.sin(fov_rad[0]/2) for ground in ground_detection_range])
+    xtrack_detection_width    = tuple([2 * ground * math.sin(fov_rad[0]/2) for ground in ground_detection_range])
 
     # Determine search leg overlap required
     ## 2 limiting cases: 
@@ -240,96 +240,15 @@ def calc_search_performance(
         valid                      = True,
         ground_detection_range     = ground_detection_range,
         downtrack_detection_range  = downtrack_detection_range,
-        crosstrack_detection_width = crosstrack_detection_width,
+        xtrack_detection_width     = xtrack_detection_width,
     )
     return result
 
 
 def calc_coordinated_level_turnaround_time(
         ac: Aircraft, 
-        lateral_offset: float, 
-    ) -> float:
-    '''
-    Determines how the aircraft will execute a the turn from the end of one leg
-    to the beginning of the next. Assumes aircraft decelerates at some constant
-    rate and turns with a fixed bank angle (ac.manx_bank_angle_rad).
-    
-    Args:
-        ac (Aircraft): aircraft making the turn.
-        lateral_offset (float): required lateral offset for start of next leg.
-
-    Returns:
-        float: time, in hr, required to execute a reversal of heading with required 
-        lateral offset.
-    '''
-
-    manx_mach = ac.manx_speed_coeff*ac.mach
-
-    ac_manx_turn_radius = turn_radius(manx_mach, ac.manx_bank_angle_rad)
-
-    if lateral_offset >= 2*ac_manx_turn_radius:
-        # Lateral offset is on or outside the coordinated, level turn radius. 
-        # If outside, add straight segment halfway through turn.
-        length_of_straight_segment = lateral_offset - 2*ac_manx_turn_radius
-        time_on_straight_segment = length_of_straight_segment/manx_mach/MACH_M_PER_SEC
-        time_on_turn = const_turn_time(manx_mach, ac.manx_bank_angle_rad, math.pi) 
-        total_time = time_on_straight_segment + time_on_turn
-
-        answer = total_time
-
-    else: 
-        # Need less lateral offset than constant turn results in. Assume aircraft
-        # snaps onto and off of it's maneuvering turn circle. Fly the arc distance 
-        # around the circle until it comes around to the other side of a chord 
-        # the distance of the required offset. That is, fly more than half the 
-        # circle to achieve less lateral offset than twice the radius while getting
-        # turned around to perform the next leg. 
-        # angle_of_travel_around_circle = 2*(math.pi - math.asin(lateral_offset/2/ac_manx_turn_radius))
-        # time_on_turn = const_turn_time(manx_mach, ac.manx_bank_angle_rad, angle_of_travel_around_circle) 
-        
-        # Need less lateral offset than semi-circle of manx turn radius results
-        # in. Let manx turn radius be R. Construct 3 circles of radius R:
-        # 1) Centered R distance away from the point perpendicular to the 
-        #    aircraft's track when it completes a search leg in the direction 
-        #    away from the next leg. Circle is tangent to where the aircraft 
-        #    completes a leg.
-        # 2) Centered R distance perpendicular to and past the point where the
-        #    aircraft will start its next leg. Circle is tangent to where the
-        #    aircraft starts the next leg.
-        # 3) Centered on the extension of the centerline between the two legs
-        #    and tangent to the other two circles. 
-        #
-        # Aircraft flys each of these circles until it reaches a tangent point,
-        # at which point it turns onto the next circle. Assume the aircraft can 
-        # transition smoothly and instantly from one circle to another. The
-        # total angle (in radians) traveled around circles of radius R is:
-        #
-        # theta-total = pi + 4*acos( (R+S/2)/2R ), as derived in slides.
-        # 
-        # Inspection of this formula shows that the total angle is:
-        #   - pi (180 deg to reverse heading), plus
-        #   - 4 times the angle travelled around the first circle. That is, on 
-        #     each side:
-        #       - Far enough around the first circle to get onto the second
-        #         circle
-        #       - The same angle around the second circle to get back to the 
-        #         original heading 
-
-        total_angle_of_travel = math.pi + 4(math.acos( (ac_manx_turn_radius+lateral_offset/2)(2*ac_manx_turn_radius) ))
-
-        distance = ac_manx_turn_radius * total_angle_of_travel
-        time = distance/ manx_mach * MACH_IN_M_PER_HR
-
-
-        answer = time
-
-    return answer/3600
-
-
-def calc_coordinated_level_turnaround_time2(
-        ac: Aircraft, 
         lateral_offset: float,
-        ac_search_performance: AircraftSearchPerformance
+        ac_search_perf: AircraftSearchPerformance
     ) -> float:
 
     '''
@@ -381,7 +300,7 @@ def calc_coordinated_level_turnaround_time2(
     # Initial straight, deceleration leg
     t1, manx_mach = calc_straight_accelerating_leg(
         mach0    = ac.mach,
-        dist     = ac_search_performance.downtrack_detection_range[1], 
+        dist     = ac_search_perf.downtrack_detection_range[1], 
         accel    = ac.manx_decel_gees,
         min_mach = ac.manx_min_mach
     )

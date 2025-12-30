@@ -7,7 +7,6 @@ from lib import (
     calc_sensor_performance, 
     calc_search_performance,
     calc_coordinated_level_turnaround_time,
-    calc_coordinated_level_turnaround_time2
 )
 
 
@@ -111,49 +110,33 @@ def evaluate_config(config: Config) -> ModelResult:
     )
 
     # Calc aircraft sensor coverage
-    result.ac_search_performance = calc_search_performance(
+    result.ac_search_perf = calc_search_performance(
         alt_m           = config.altitude_kft * 1000 / FEET_PER_METER,
         slant_det_range = result.sensor_performance.slant_detection_range,
         fov_rad         = tuple([fov_deg * RAD_PER_DEG for fov_deg in config.sensor_assumption.fov_deg]),
         aoi             = config.aoi
     )
 
-    if not result.ac_search_performance.valid:
+    if not result.ac_search_perf.valid:
         result.valid = False
-        result.reason = result.ac_search_performance.reason
+        result.reason = result.ac_search_perf.reason
         return(result)
 
     # Calc time ac to reverse heading and offset for next leg with a 
     # coordinated, level turn
-    result.ac_turn_time = calc_coordinated_level_turnaround_time2(
+    result.ac_turn_time = calc_coordinated_level_turnaround_time(
         ac, 
-        result.ac_search_performance.crosstrack_detection_width[1],
-        result.ac_search_performance
+        result.ac_search_perf.xtrack_detection_width[1],
+        result.ac_search_perf
     )
-
-
-    return(result)
-
-    if ac.downtrack_range[1].valid:
-        leg_length = Result(
-            valid = True,
-            value = config.aoi_l_by_w[0] - 2*ac.downtrack_range[1].value,
-            reason = None
-        )
-    else:
-        leg_length = Result(
-            valid = False,
-            value = None,
-            reason = 'No downtrack distance because plane\'s altitude > sensor\'s slant detection range. '
-        )
-
 
     # Check if overlap of successive legs is necessary:
     # Limiting cases to consider:
-    ##   - design target traveling perpendicular to ac's track: makes most progress
-    ##     across legs ac is searching, could evade detection if made it entirely 
-    ##     across tracks while ac is traveling down and back. However, displays
-    ##     horizontal dimension and is detectable from further away.
+    ##   - "Beaming": design target traveling perpendicular to ac's track: makes
+    ##     most progress across legs ac is searching, could evade detection if 
+    ##     made it entirely across tracks while ac is traveling down and back. 
+    ##     However, displays horizontal dimension and is detectable from further
+    ##     away.
     
     ### time between when this target is barely missed and when ac would 
     ### potentially see it on the next leg. The time to make a full leg, plus
@@ -161,31 +144,41 @@ def evaluate_config(config: Config) -> ModelResult:
     ### required yet), plus the time to drive the next leg to the beaming target
     ### detection range
 
-    return
-    time_downtrack = (2*leg_length-ac.ground_range[0].value)/ac.mach/MACH_IN_M_PER_HR
-    time_turning = execute_turn(ac, ac.beam_width[1].value)
-    time = time_downtrack + time_turning
+    time_downtrack = (2*config.aoi.length)/ac.mach/MACH_M_PER_SEC
+    time_turning   = result.ac_turn_time
+    time           = time_downtrack + time_turning
 
-    tgt_dist_travelled_cross_track = time * ac.sensor.tgt_speed * 1852
-    overlap1 = tgt_dist_travelled_cross_track - (ac.ground_range[0].value-ac.ground_range[1].value)
-    overlap1 = 0 if overlap1 < 0 else overlap1
+    tgt_beaming_dist_trav_cross_track = time * config.target.max_speed * KTS_IN_M_PER_SEC
+    sweep_width_beaming_tgt           = result.ac_search_perf.xtrack_detection_width[0] - tgt_beaming_dist_trav_cross_track
+
+    ##   - "Glancing": design target traveling across ac's legs at an aspect 
+    ##     where the horizontal dimension presented is equal to the height -
+    ##     minimal detection range while still traveling across ac's legs and
+    ##     could potentially evade detection in worst case. 
+
+    aob = math.acos(config.target.dims[1]/config.target.dims[0])
+    tgt_speed_cross_track = config.target.max_speed * math.cos(aob)
+    tgt_speed_down_track  = config.target.max_speed * math.sin(aob)
+
+    time_downtrack = (2*config.aoi.length-tgt_speed_down_track)/ac.mach/MACH_M_PER_SEC
+    time_turning   = result.ac_turn_time
+    time           = time_downtrack + time_turning
+
+    tgt_glancing_dist_trav_cross_track  = time * tgt_speed_cross_track * KTS_IN_M_PER_SEC
+    sweep_width_glancing_tgt            = result.ac_search_perf.xtrack_detection_width[1] - tgt_glancing_dist_trav_cross_track
 
 
-    ##   - design target traveling across ac's legs at an aspect where the horizontal
-    ##     dimension presented is equal to the height - minimal detection range 
-    ##     while still traveling across ac's legs and could potentially evade 
-    ##     detection in worst case. 
+    effective_sweep_width = min(sweep_width_beaming_tgt, sweep_width_glancing_tgt)
 
-    aob = math.acos(ac.sensor.tgt_dims[1]/ac.sensor.tgt_dims[0])
-    tgt_speed_cross_track = ac.sensor.tgt_speed * math.cos(aob)
+    result.effective_sweep_width = effective_sweep_width
 
-    time_downtrack = (2*leg_length-ac.ground_range[1].value)/ac.mach/MACH_IN_M_PER_HR
-    time_turning = execute_turn(ac, ac.beam_width[1].value)
-    time = time_downtrack + time_turning
 
-    overlap2 = tgt_speed_cross_track * 1852 * time
-    
-    overlap = max(overlap1, overlap2)
+
+
+
+    return(result)
+
+
 
     sweep_width = ac.beam_width[1].value - overlap
     print(f'sweep_width: {sweep_width:0.1f} = {ac.beam_width[1].value:0.1f}-{overlap:0.1f}')
