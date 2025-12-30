@@ -35,7 +35,6 @@ class BaseScene(Scene):
         self.add(self.search_area)
 
 
-        # Define the path for the UAV
         # Create lanes in the search area
         lane_width = search_area.width / N_LANES
         self.lane_width = lane_width
@@ -71,28 +70,45 @@ class BaseScene(Scene):
             )
         )
         # Add lanes and flight paths to the scene
-        # self.play(Create(lane_boundaries), Create(flight_paths))
         self.add(lane_boundaries, flight_paths)
+
+
+class FOV(VGroup):
+    def __init__(self, origin, cross, angle_deg, **kwargs):
+        super().__init__(*kwargs)
+
+        # Calculate downtrack distance for angle and crosstrack distance
+        angle_rad = angle_deg * 2*math.pi/360
+        downtrack = (cross/2) / math.tan(angle_rad/2)
+
+        # Create/add polygon
+        self.fov = VGroup(
+            Polygon(
+                origin, origin + downtrack*UP + cross/2*LEFT, origin + downtrack*UP + cross/2*RIGHT,
+                stroke_color=YELLOW
+            ).set_fill(YELLOW, opacity=0.15)
+        )
+        self.add(self.fov)
 
 
 class UAV(VGroup):
 
-    def __init__(self, lane_width, **kwargs):
+    def __init__(self, fov_width: float, fov_deg: float, include_beam_detection_fov: bool = False, **kwargs):
         super().__init__(**kwargs)
 
         # Create the UAV as a triangle
-        self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*lane_width)
+        self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*fov_width)
 
-        # Create the sensor field of view as a cone
-        self.fov = VGroup(
-            Polygon(
-                self.uav.get_top(), self.uav.get_top() + UP * 1.5 + LEFT * 0.5, self.uav.get_top() + UP * 1.5 + RIGHT * 0.5,
-                stroke_color=YELLOW
-            ).set_fill(YELLOW, opacity=0.15)
-        )
+        # Create sensor FOV vs. design target's height dimension (shorter detection range)
+        self.fov = FOV(origin=self.uav.get_top(), cross=fov_width, angle_deg=fov_deg)
 
         # Group UAV and FOV
         self.add(self.uav, self.fov)
+
+        # Optionally create sensor FOV vs. design target's length dimension (longer detection range)
+        if include_beam_detection_fov:
+            self.fov_beaming = FOV(origin=self.uav.get_top(), cross=1.5*fov_width, angle_deg=fov_deg)
+            self.add(self.fov_beaming)
 
 
 class SensorGapWhenTurning(BaseScene):
@@ -100,7 +116,7 @@ class SensorGapWhenTurning(BaseScene):
 
 
         # Add UAV and FOV to the scene
-        uav_group = UAV(lane_width=self.lane_width)
+        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35, include_beam_detection_fov=False)
         self.add(uav_group)
 
         dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
@@ -160,9 +176,8 @@ class SensorGapWhenTurning(BaseScene):
 class ShortLateralOffsetTurn(BaseScene):
     def construct(self):
 
-
         # Add UAV and it's FOV
-        uav_group = UAV(lane_width=self.lane_width)
+        uav_group = UAV(fov_width=self.lane_width, fov_deg=35)
         self.add(uav_group)
 
         # Calculations for S < 2R turn
@@ -331,6 +346,7 @@ class ShortLateralOffsetTurn(BaseScene):
 
         self.play(r.animate.set_value(1.0))
         self.play(r.animate.set_value(0.8))
-        self.play(r.animate.set_value(2))
+        self.play(r.animate.set_value(2.0))
+        self.play(r.animate.set_value(1.0))
         # End the animation
         self.wait(10)
