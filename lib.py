@@ -150,16 +150,19 @@ def calc_straight_accelerating_leg(
     ## Time to decelerate to min_mach
     t_min_mach = (min_mach-mach0)*MACH_M_PER_SEC/(accel*GEE)
 
-    ## Time to reach dist under deceleration - quadratic equation
+    ## Time to reach dist under deceleration
+    ## Quadratic equation: 0 = 1/2*a*t^2 + v0*t - s
     a = accel*GEE/2
     b = mach0*MACH_M_PER_SEC
     c = -dist
     discriminant = (b**2) - (4*a*c)
     if discriminant < 0:
+        # Decelerating body would stop and turn around before reaching dist
         t_dist = None
     else:
         t1 = (-b + (discriminant)**0.5) / (2*a)
         t2 = (-b - (discriminant)**0.5) / (2*a)
+        # Want the minimum, positive solution 
         t_dist = min([t for t in [t1, t2] if t > 0])
     
     
@@ -382,10 +385,10 @@ def calc_coordinated_level_turnaround_time2(
 
     # Initial straight, deceleration leg
     t1, manx_mach = calc_straight_accelerating_leg(
-        ac.mach,
-        ac_search_performance.downtrack_detection_range[1], 
-        ac.manx_decel_gees,
-        ac.manx_min_mach
+        mach0    = ac.mach,
+        dist     = ac_search_performance.downtrack_detection_range[1], 
+        accel    = ac.manx_decel_gees,
+        min_mach = ac.manx_min_mach
     )
 
     # Turn around
