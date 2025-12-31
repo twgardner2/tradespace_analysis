@@ -8,6 +8,7 @@ from lib import (
     calc_sensor_performance, 
     calc_search_performance,
     calc_coordinated_level_turnaround_time,
+    calc_effective_sweep_width
 )
 
 
@@ -123,55 +124,25 @@ def evaluate_config(config: Config) -> ModelResult:
         result.reason = result.ac_search_perf.reason
         return(result)
 
-    # Calc time ac to reverse heading and offset for next leg with a 
-    # coordinated, level turn
-    result.ac_turn_time = calc_coordinated_level_turnaround_time(
-        ac, 
-        result.ac_search_perf.xtrack_detection_width[1],
-        result.ac_search_perf
+    # Calc effective sweep width, accounting for overlap required for limiting 
+    # targets
+    effective_sweep_width, ac_turn_time = calc_effective_sweep_width(
+        config, ac, result.ac_search_perf, debug=True
     )
 
-    # Check if overlap of successive legs is necessary:
-    # Limiting cases to consider:
-    ##   - "Beaming": design target traveling perpendicular to ac's track: makes
-    ##     most progress across legs ac is searching, could evade detection if 
-    ##     made it entirely across tracks while ac is traveling down and back. 
-    ##     However, displays horizontal dimension and is detectable from further
-    ##     away.
-    
-    ### time between when this target is barely missed and when ac would 
-    ### potentially see it on the next leg. The time to make a full leg, plus
-    ### time to turn around (approx because we don't know the exact overlap 
-    ### required yet), plus the time to drive the next leg to the beaming target
-    ### detection range
 
-    time_downtrack = (2*config.aoi.length)/ac.mach/MACH_M_PER_SEC
-    time_turning   = result.ac_turn_time
-    time           = time_downtrack + time_turning
-
-    tgt_beaming_dist_trav_cross_track = time * config.target.max_speed * KTS_IN_M_PER_SEC
-    sweep_width_beaming_tgt           = result.ac_search_perf.xtrack_detection_width[0] - tgt_beaming_dist_trav_cross_track
-
-    ##   - "Glancing": design target traveling across ac's legs at an aspect 
-    ##     where the horizontal dimension presented is equal to the height -
-    ##     minimal detection range while still traveling across ac's legs and
-    ##     could potentially evade detection in worst case. 
-
-    aob = math.acos(config.target.dims[1]/config.target.dims[0])
-    tgt_speed_cross_track = config.target.max_speed * math.cos(aob)
-    tgt_speed_down_track  = config.target.max_speed * math.sin(aob)
-
-    time_downtrack = (2*config.aoi.length-tgt_speed_down_track)/ac.mach/MACH_M_PER_SEC
-    time_turning   = result.ac_turn_time
-    time           = time_downtrack + time_turning
-
-    tgt_glancing_dist_trav_cross_track  = time * tgt_speed_cross_track * KTS_IN_M_PER_SEC
-    sweep_width_glancing_tgt            = result.ac_search_perf.xtrack_detection_width[1] - tgt_glancing_dist_trav_cross_track
-
-
-    effective_sweep_width = min(sweep_width_beaming_tgt, sweep_width_glancing_tgt)
 
     result.effective_sweep_width = effective_sweep_width
+    result.ac_turn_time = ac_turn_time
+
+
+    if effective_sweep_width < 0:
+        result.valid  = False
+        result.reason = 'Effective sweep width is negative, design target can evade detection'
+        return result
+
+    # How many aircraft needed to search entire area given endurance?
+    n_legs = math.ceil(config.aoi.width/result.effective_sweep_width)
 
 
 
@@ -179,45 +150,7 @@ def evaluate_config(config: Config) -> ModelResult:
 
     return(result)
 
-
-
-    sweep_width = ac.beam_width[1].value - overlap
-    print(f'sweep_width: {sweep_width:0.1f} = {ac.beam_width[1].value:0.1f}-{overlap:0.1f}')
     
-    # Calc number of legs (n_legs) required to search AOI
-    n_legs = math.ceil(aoi[1]/sweep_width) if sweep_width > 0 else None
-    
-
-
-    # # time spent on leg
-
-    # # calc time to complete legs
-    # flight_distance = INGRESS_RANGE + EGRESS_RANGE + n_legs*leg_length + aoi[0]
-    # flight_time = flight_distance/(ac.mach * MACH_IN_M_PER_HR)
-
-    # # calc # sorties required
-
-    # # calc cost
-    # ac_cost = cost(ac.mach, ac.alt_m, ac.sensor)
-
-    # # endurance
-    # ac_endurance = endurance(ac.mach, ac.alt_m)
-
-    result = {
-        'altitude':         ac.alt_kft,
-        'mach':             ac.mach,
-        'sensor':           ac.sensor.name,
-        'sweep_width':      round(sweep_width,2),
-        'n_legs':           round(n_legs,2),
-        # 'flight_time':      round(flight_time, 2),
-        # 'ac_endurance':    round(ac_endurance, 2),
-        # 'ac_cost':              round(ac_cost, 2),
-
-    }
-    
-    
-    return (result)
-
 
 def main():
 

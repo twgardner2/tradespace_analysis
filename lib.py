@@ -318,3 +318,140 @@ def calc_coordinated_level_turnaround_time(
 
 
     return t1 + t2 + t3
+
+
+def calc_effective_sweep_width(
+        config: Config,
+        ac: Aircraft,
+        ac_search_perf: AircraftSearchPerformance,
+        debug: bool = False
+) -> tuple[float, float]:
+    '''
+    Calculate the effective sweep width and turn-around time for the aircraft
+    against the design target. The sweep width based on detection range is 
+    reduced to provide overlap between legs to prevent targets "slipping 
+    through the cracks."
+
+    There are 2 limiting cases considered: 
+    - "Beaming": design target traveling perpendicular to ac's track: makes
+      most progress across legs ac is searching, could evade detection if 
+      made it entirely across tracks while ac is traveling down and back. 
+      However, displays horizontal dimension and is detectable from further
+      away.
+
+      I consider a target traveling perpendicular to the aircraft's track and 
+      barely missed at the beginning of a search leg. The sweep width has to be 
+      reduced to provide enough overlap to keep this target within the search 
+      volume when the aircraft returns on the next leg.
+
+    - "Glancing": design target traveling across the aircraft's legs at an 
+      aspect where the horizontal dimension presented is equal to the height. 
+      Aircraft has minimal detection range on the target while it still 
+      travelings across the aircraft's legs. 
+      
+      Again, consider a target just barely missed at the beginning of a search
+      leg and calculate the amount the sweep width has to be reduced to detect
+      the target on the next leg
+
+    The smaller effective sweep width will be used in the rest of the analysis. 
+    If the smaller effective sweep width is negative, the configuration is 
+    infeasible and cannot achieve the objective. 
+    
+    Because the lateral offset between legs (effective sweep width) affects the 
+    time the aircraft spends turning around between legs, which affects how long 
+    the aircraft takes to return on the next leg after just missing the target
+    in the limiting cases, I iterate the calculation until converging on a 
+    stable answer.
+    
+    Perform calculation iteratively as follows:
+
+    1) Get turn-around time for lateral offset equal to the cross-track
+    detection width against the height of the design target. 
+
+    2) Use that turn-around time to calculate required lateral offset to cover 
+    the limiting cases.
+
+    3) Recalculate turn-around time for the new effective sweep width.
+
+    4) Recalculate effective sweep width
+
+    5) If the change in effective sweep width changed more than 5%, repeat steps
+    3) and 4). If not, stop.
+
+    Args:
+
+    Returns:
+    tuple[float, float]: (effective sweep width in meters, turn-around time in 
+    sec)
+    '''
+
+    if debug: print(f'calc_effective_sweep_width for {config.altitude_kft}, {config.mach}, {config.sensor}')
+    
+    # Initial effective sweep width is cross-track detection width vs. target's
+    # height
+    effective_sweep_width_0 = ac_search_perf.xtrack_detection_width[1]
+
+
+    # Calc initial aircraft turn-around time
+    ac_turn_time_0 = calc_coordinated_level_turnaround_time(
+        ac             = ac, 
+        lateral_offset = effective_sweep_width_0,
+        ac_search_perf = ac_search_perf
+    )
+
+
+    # Calc initial effective sweep width
+    ## Limiting beaming target
+    def sweep_width_for_limiting_cases(config, ac, turn_time, ac_search_perf):
+
+        # Beaming
+        time_downtrack = (2*config.aoi.length)/ac.mach/MACH_M_PER_SEC
+        time_turning   = turn_time
+        time           = time_downtrack + time_turning
+
+        tgt_beaming_dist_trav_cross_track = time * config.target.max_speed * KTS_IN_M_PER_SEC
+        sweep_width_beaming_tgt           = ac_search_perf.xtrack_detection_width[0] - tgt_beaming_dist_trav_cross_track
+
+        # Glancing
+        aob = math.acos(config.target.dims[1]/config.target.dims[0])
+        tgt_speed_cross_track = config.target.max_speed * math.cos(aob)
+        tgt_speed_down_track  = config.target.max_speed * math.sin(aob)
+
+        time_downtrack = (2*config.aoi.length-tgt_speed_down_track)/ac.mach/MACH_M_PER_SEC
+        time_turning   = turn_time
+        time           = time_downtrack + time_turning
+
+        tgt_glancing_dist_trav_cross_track = time * tgt_speed_cross_track * KTS_IN_M_PER_SEC
+        sweep_width_glancing_tgt           = ac_search_perf.xtrack_detection_width[1] - tgt_glancing_dist_trav_cross_track
+
+        return min(sweep_width_beaming_tgt, sweep_width_glancing_tgt)
+
+    # Calc first iteration
+    effective_sweep_width_1 = sweep_width_for_limiting_cases(config, ac, ac_turn_time_0, ac_search_perf)
+    if debug: print(f'    offset/time -> new offset: {effective_sweep_width_0:0.0f}/{ac_turn_time_0:0.0f} -> {effective_sweep_width_1:0.0f} {100*(effective_sweep_width_1-effective_sweep_width_0)/effective_sweep_width_0:0.5f}%')
+    # Check if negative (infeasible) or 0 (infeasible and will cause DivByZero 
+    # error shortly)
+    if effective_sweep_width_1 <= 0:
+        if debug: print(f'    neg width, exiting!\n')
+        return (effective_sweep_width_1, ac_turn_time_0)
+
+    # Check for convergence
+    i=0
+    while abs(((effective_sweep_width_1 - effective_sweep_width_0)/effective_sweep_width_0)) > 0.05 and i<50:
+        i = i+1
+        effective_sweep_width_0 = effective_sweep_width_1
+        ac_turn_time_1 = calc_coordinated_level_turnaround_time(
+            ac             = ac, 
+            lateral_offset = effective_sweep_width_0,
+            ac_search_perf = ac_search_perf
+        )
+        effective_sweep_width_1 = sweep_width_for_limiting_cases(config, ac, ac_turn_time_1, ac_search_perf)
+        if debug: print(f' {i}: offset/time -> new offset: {effective_sweep_width_0:0.0f}/{ac_turn_time_1:0.0f} -> {effective_sweep_width_1:0.0f} {100*(effective_sweep_width_1-effective_sweep_width_0)/effective_sweep_width_0:0.5f}%')
+
+
+    if debug: print()
+    return (effective_sweep_width_1, ac_turn_time_1)
+    
+
+
+    
