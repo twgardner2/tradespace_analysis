@@ -375,8 +375,8 @@ def calc_effective_sweep_width(
 
     4) Recalculate effective sweep width
 
-    5) If the change in effective sweep width changed more than 5%, repeat steps
-    3) and 4). If not, stop.
+    5) If the change in effective sweep width was < 1%, stop. If it changed more
+    than 1%, repeat steps 3) and 4) up to 25 times.
 
     Args:
 
@@ -429,6 +429,7 @@ def calc_effective_sweep_width(
     # Calc first iteration
     effective_sweep_width_1 = sweep_width_for_limiting_cases(config, ac, ac_turn_time_0, ac_search_perf)
     if debug: print(f'    offset/time -> new offset: {effective_sweep_width_0:0.0f}/{ac_turn_time_0:0.0f} -> {effective_sweep_width_1:0.0f} {100*(effective_sweep_width_1-effective_sweep_width_0)/effective_sweep_width_0:0.5f}%')
+    
     # Check if negative (infeasible) or 0 (infeasible and will cause DivByZero 
     # error shortly)
     if effective_sweep_width_1 <= 0:
@@ -437,7 +438,7 @@ def calc_effective_sweep_width(
 
     # Check for convergence
     i=0
-    while abs(((effective_sweep_width_1 - effective_sweep_width_0)/effective_sweep_width_0)) > 0.05 and i<50:
+    while abs(((effective_sweep_width_1 - effective_sweep_width_0)/effective_sweep_width_0)) > 0.01 and i<25:
         i = i+1
         effective_sweep_width_0 = effective_sweep_width_1
         ac_turn_time_1 = calc_coordinated_level_turnaround_time(
