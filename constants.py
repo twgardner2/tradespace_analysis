@@ -63,7 +63,6 @@ class Aircraft:
     manx_bank_angle_rad: float
     manx_decel_gees:     float
     manx_min_mach:       float
-    manx_speed_coeff:    float # TODO remove if switching to more complex turn calculation
     sensor:              Sensor
     sensor_assumption:   SensorAssumption
     alt_m:               float = field(init=False)
@@ -128,7 +127,6 @@ class Config:
     altitude_kft: float
     mach: float
     manx_bank_angle_rad: float
-    manx_speed_coeff: float # TODO remove if switching to more complex turn calculation
     manx_decel_gees: float
     manx_min_mach: float
 

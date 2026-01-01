@@ -35,7 +35,6 @@ MANX_BANK_ANGLE_DEG = 35
 MANX_BANK_ANGLE_RAD = MANX_BANK_ANGLE_DEG * RAD_PER_DEG
 MANX_DECEL_GEES = -0.7
 MANX_MIN_MACH = 0.15
-MANX_SPEED_COEFFICIENT = 0.7 # TODO remove if switching to more complex turn calculation
 
 TARGET = DesignTarget(
     type      = "Frigate",
@@ -98,7 +97,6 @@ def evaluate_config(config: Config) -> ModelResult:
         alt_kft             = config.altitude_kft, 
         mach                = config.mach,
         manx_bank_angle_rad = config.manx_bank_angle_rad,
-        manx_speed_coeff    = config.manx_speed_coeff,
         manx_decel_gees     = config.manx_decel_gees,
         manx_min_mach       = config.manx_min_mach,
         sensor              = config.sensor, 
@@ -163,7 +161,6 @@ def main():
                     altitude_kft        = altitude,
                     mach                = mach,
                     manx_bank_angle_rad = MANX_BANK_ANGLE_RAD,
-                    manx_speed_coeff    = MANX_SPEED_COEFFICIENT,
                     manx_decel_gees     = MANX_DECEL_GEES,
                     manx_min_mach       = MANX_MIN_MACH,
                     sensor              = sensor,
