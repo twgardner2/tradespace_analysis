@@ -2,6 +2,7 @@ import pandas as pd
 from dataclasses import asdict
 import subprocess
 import sys
+import os
 from constants import *
 from lib import (
     validate_config, 
@@ -193,10 +194,13 @@ def main():
     # Write results to output.csv
     results_dicts = [asdict(r) for r in results]
     df = pd.json_normalize(results_dicts, sep='_')
-    df.to_csv('output.csv')
+    df.to_csv('output/model_output.csv')
 
     # Run R script to do analysis
-    subprocess.call([r'Rscript', r'./plots.R'])
+    subprocess.call([r'Rscript', r'./r/analysis.R'], cwd=os.getcwd())
+
+    sys.exit()
+
 
 if __name__ == '__main__':
     main()
