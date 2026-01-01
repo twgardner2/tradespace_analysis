@@ -8,7 +8,8 @@ from lib import (
     calc_sensor_performance, 
     calc_search_performance,
     calc_effective_sweep_width,
-    calc_n_legs_covered_per_ac
+    calc_ac_search_rate,
+    calc_onsta_requirement
 )
 
 
@@ -19,6 +20,8 @@ AOI = AOI(
     width   = 100_000, # meters
     egress  = 100_000 # meters
 )
+
+AOI_REVISIT_TIME_HR = 6 # hours
 
 # region Design parameters
 altitudes = range(5,30,5)
@@ -136,39 +139,33 @@ def evaluate_config(config: Config) -> ModelResult:
     result.ac_turn_time          = ac_turn_time
 
     # Calc number of legs an aircraft can support with its endurance
-    n_legs = calc_n_legs_covered_per_ac(
+    search_rate = calc_ac_search_rate(
         ac        = ac,
         aoi       = result.config.aoi,
-        turn_time = result.ac_turn_time
+        turn_time = result.ac_turn_time,
+        eff_width = result.effective_sweep_width
     )
 
-    if n_legs is None:
+    if search_rate is None:
         result.valid = False
         result.reason = 'Aircraft endurance cannot support any search legs'
 
-    result.search_legs_per_ac = n_legs
+    result.search_rate = search_rate
+
+    # Calculate fleet size
+    onsta = calc_onsta_requirement(
+        aoi = config.aoi,
+        ac_search_rate = result.search_rate,
+        revisit_time = config.aoi_revisit_time_hr*SEC_PER_HR 
+        )
+    
+    print(f'{ac.mach}M/{ac.alt_kft}kft/{ac.sensor}: {onsta:0.2f} on-station')
+
+    result.onsta_req_n = onsta
+    result.onsta_req_cost = onsta * ac.cost
 
     return result
 
-    result.effective_sweep_width = effective_sweep_width
-    result.ac_turn_time = ac_turn_time
-
-
-    if effective_sweep_width < 0:
-        result.valid  = False
-        result.reason = 'Effective sweep width is negative, design target can evade detection'
-        return result
-
-    # How many aircraft needed to search entire area given endurance?
-    n_legs = math.ceil(config.aoi.width/result.effective_sweep_width)
-
-
-
-
-
-    return(result)
-
-    
 
 def main():
 
@@ -186,7 +183,8 @@ def main():
                     sensor              = sensor,
                     sensor_assumption   = SENSOR_ASSUMPTIONS[sensor],
                     target              = TARGET,
-                    aoi                 = AOI
+                    aoi                 = AOI,
+                    aoi_revisit_time_hr = AOI_REVISIT_TIME_HR
                 )
                 
                 result = evaluate_config(config)

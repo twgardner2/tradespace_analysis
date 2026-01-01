@@ -454,10 +454,12 @@ def calc_effective_sweep_width(
     return (effective_sweep_width_1, ac_turn_time_1)
     
 
-def calc_n_legs_covered_per_ac(ac: Aircraft, aoi: AOI, turn_time: float) -> float:
+def calc_ac_search_rate(ac: Aircraft, aoi: AOI, turn_time: float, eff_width: float) -> float:
     '''
-    Calculate the number of legs a single aircraft can cover on a single sortie.
-    Assumes aircraft egresses back where it came from. 
+    Determines the rate at which the aircraft searches the AOI (m^2/s).
+
+    Calculates the number of legs a single aircraft can cover on a single 
+    sortie. Assumes aircraft egresses back where it came from. 
     
     Breaks mission into two types of segments:
     1) Terminal segment: Ingress, do a leg "down", turn, do a leg "back", and 
@@ -466,6 +468,10 @@ def calc_n_legs_covered_per_ac(ac: Aircraft, aoi: AOI, turn_time: float) -> floa
     2) Working segments: Turn, go "down", turn, go "back" - will do this as many
     times as possible with remaining endurance  
 
+    Search rate is:
+     
+        (# legs performed * effective sweep width) / flight time 
+    
     Args:
         ac: Aircraft
         aoi: AOI
@@ -473,15 +479,30 @@ def calc_n_legs_covered_per_ac(ac: Aircraft, aoi: AOI, turn_time: float) -> floa
     '''
 
     # Time for segment types
-    segment_terminal = (aoi.ingress + aoi.egress + 2*aoi.length)/ac.mach/MACH_M_PER_SEC # s
-    segment_working  = 2*turn_time + 2*aoi.length/ac.mach/MACH_IN_M_PER_HR # s
+    time_segment_terminal = (aoi.ingress + aoi.egress + 2*aoi.length)/ac.mach/MACH_M_PER_SEC # s
+    time_segment_working  = 2*turn_time + 2*aoi.length/ac.mach/MACH_IN_M_PER_HR # s
 
     # If terminal segment is greater than the endurance
-    if segment_terminal > ac.endurance_sec:
+    if time_segment_terminal > ac.endurance_sec:
         # Infeasible, can't even get there and back
         return None
     
-    n_segments = 1 + math.floor((ac.endurance_sec-segment_terminal)/segment_working)
+    n_segments = 1 + math.floor((ac.endurance_sec-time_segment_terminal)/time_segment_working)
+    flight_time = time_segment_terminal + (n_segments-1)*time_segment_working
 
-    return n_segments*2 # 2 legs per segment
-    
+    search_rate = 2 * n_segments * eff_width * aoi.length / flight_time
+
+    return search_rate # 2 legs per segment
+
+
+def calc_onsta_requirement(aoi: AOI, ac_search_rate: float, revisit_time: float) -> float:
+    '''
+    Calculate the required number of on-station aircraft given their search rate
+    and the required revisit rate. 
+
+
+    '''
+
+    n_onsta = (aoi.length * aoi.width) / revisit_time / ac_search_rate
+
+    return n_onsta

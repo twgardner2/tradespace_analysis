@@ -147,6 +147,7 @@ class Config:
 
     # AOI
     aoi: AOI
+    aoi_revisit_time_hr: float
 
 @dataclass
 class ModelResult:
@@ -158,5 +159,7 @@ class ModelResult:
     ac_turn_time: float                       = None
     required_overlap: float                   = None
     effective_sweep_width: float              = None
-    search_legs_per_ac: float                 = None
+    search_rate: float                        = None
+    onsta_req_n: float                        = None
+    onsta_req_cost: float                     = None
 
