@@ -346,8 +346,8 @@ def calc_effective_sweep_width(
 
     - "Glancing": design target traveling across the aircraft's legs at an 
       aspect where the horizontal dimension presented is equal to the height. 
-      Aircraft has minimal detection range on the target while it still 
-      travelings across the aircraft's legs. 
+      Aircraft has minimal detection range on the target while still traveling
+      across the aircraft's legs. 
       
       Again, consider a target just barely missed at the beginning of a search
       leg and calculate the amount the sweep width has to be reduced to detect
