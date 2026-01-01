@@ -7,8 +7,8 @@ from lib import (
     validate_config, 
     calc_sensor_performance, 
     calc_search_performance,
-    calc_coordinated_level_turnaround_time,
-    calc_effective_sweep_width
+    calc_effective_sweep_width,
+    calc_n_legs_covered_per_ac
 )
 
 
@@ -20,9 +20,8 @@ AOI = AOI(
     egress  = 100_000 # meters
 )
 
-# Design parameters
-# altitudes = range(5,30,5)
-altitudes = [100]
+# region Design parameters
+altitudes = range(5,30,5)
 machs     = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
@@ -35,6 +34,7 @@ MANX_BANK_ANGLE_DEG = 35
 MANX_BANK_ANGLE_RAD = MANX_BANK_ANGLE_DEG * RAD_PER_DEG
 MANX_DECEL_GEES = -0.7
 MANX_MIN_MACH = 0.15
+# endregion
 
 TARGET = DesignTarget(
     type      = "Frigate",
@@ -63,6 +63,7 @@ SENSOR_ASSUMPTIONS = {
     ),
 }
 
+# region evaluate_config
 def evaluate_config(config: Config) -> ModelResult:
     '''
     Given a particular configuration of the scenario, perform calculations to 
@@ -77,11 +78,8 @@ def evaluate_config(config: Config) -> ModelResult:
     used to calculate this result, along with intermediate and final calculations
     
     '''
-    # Calc length of each leg - how much of the length of the box do we have to 
-    # fly to detect target at the edge. Limiting case is a target showing an aspect
-    # where the height is the largest dimension we see
 
-    # region: Validate config ----
+    # Validate config ----
     result = ModelResult(config=config)
 
     config_valid, reason = validate_config(config)
@@ -90,7 +88,6 @@ def evaluate_config(config: Config) -> ModelResult:
         result.reason = reason
         return result 
 
-    # endregion ----
 
     # Instantiate the aircraft
     ac = Aircraft(
@@ -122,13 +119,36 @@ def evaluate_config(config: Config) -> ModelResult:
         result.reason = result.ac_search_perf.reason
         return(result)
 
-    # Calc effective sweep width, accounting for overlap required for limiting 
-    # targets
+    # Calc effective sweep width, account for overlap for limiting targets
     effective_sweep_width, ac_turn_time = calc_effective_sweep_width(
-        config, ac, result.ac_search_perf, debug=True
+        config         = config, 
+        ac             = ac, 
+        ac_search_perf = result.ac_search_perf, 
+        # debug          = True
     )
 
+    if effective_sweep_width <= 0:
+        result.valid  = False
+        result.reason = 'Aircraft/sensor pairing has negative effective sweep width against design target'
+        return result
+    
+    result.effective_sweep_width = effective_sweep_width
+    result.ac_turn_time          = ac_turn_time
 
+    # Calc number of legs an aircraft can support with its endurance
+    n_legs = calc_n_legs_covered_per_ac(
+        ac        = ac,
+        aoi       = result.config.aoi,
+        turn_time = result.ac_turn_time
+    )
+
+    if n_legs is None:
+        result.valid = False
+        result.reason = 'Aircraft endurance cannot support any search legs'
+
+    result.search_legs_per_ac = n_legs
+
+    return result
 
     result.effective_sweep_width = effective_sweep_width
     result.ac_turn_time = ac_turn_time

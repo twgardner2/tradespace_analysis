@@ -454,5 +454,34 @@ def calc_effective_sweep_width(
     return (effective_sweep_width_1, ac_turn_time_1)
     
 
+def calc_n_legs_covered_per_ac(ac: Aircraft, aoi: AOI, turn_time: float) -> float:
+    '''
+    Calculate the number of legs a single aircraft can cover on a single sortie.
+    Assumes aircraft egresses back where it came from. 
+    
+    Breaks mission into two types of segments:
+    1) Terminal segment: Ingress, do a leg "down", turn, do a leg "back", and 
+    egress - will always do this one time
 
+    2) Working segments: Turn, go "down", turn, go "back" - will do this as many
+    times as possible with remaining endurance  
+
+    Args:
+        ac: Aircraft
+        aoi: AOI
+        turn_time: float
+    '''
+
+    # Time for segment types
+    segment_terminal = (aoi.ingress + aoi.egress + 2*aoi.length)/ac.mach/MACH_M_PER_SEC # s
+    segment_working  = 2*turn_time + 2*aoi.length/ac.mach/MACH_IN_M_PER_HR # s
+
+    # If terminal segment is greater than the endurance
+    if segment_terminal > ac.endurance_sec:
+        # Infeasible, can't even get there and back
+        return None
+    
+    n_segments = 1 + math.floor((ac.endurance_sec-segment_terminal)/segment_working)
+
+    return n_segments*2 # 2 legs per segment
     

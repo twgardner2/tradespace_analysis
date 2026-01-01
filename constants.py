@@ -3,11 +3,17 @@ from enum import Enum, auto
 import math
 
 # Constants
+## Physics
 GEE               = 9.80665       # m/s^2
+## Time
+SEC_PER_HR        = 3600          # sec/hr
+## Speed
 MACH_IN_M_PER_HR  = 1.2348e6      # (meters/hour)/mach
 MACH_M_PER_SEC    = 343           # (meters/s)/mach
 KTS_IN_M_PER_SEC  = 0.51444       # (meters/s)/knot
+## Length
 FEET_PER_METER    = 3.2808        # ft/m
+## Angles
 RAD_PER_DEG       = 2*math.pi/360 # radians/degree
 
 # Data Classes
@@ -67,7 +73,8 @@ class Aircraft:
     sensor_assumption:   SensorAssumption
     alt_m:               float = field(init=False)
     cost:                float = field(init=False) 
-    endurance:           float = field(init=False)
+    endurance_hr:        float = field(init=False)
+    endurance_sec:       float = field(init=False)
 
     def calc_endurance(self) -> float:
         '''
@@ -116,9 +123,10 @@ class Aircraft:
 
 
     def __post_init__(self):
-        self.alt_m     = self.alt_kft*1000/FEET_PER_METER
-        self.cost      = self.calc_cost()
-        self.endurance = self.calc_endurance()
+        self.alt_m         = self.alt_kft*1000/FEET_PER_METER
+        self.cost          = self.calc_cost()
+        self.endurance_hr  = self.calc_endurance()
+        self.endurance_sec = self.endurance_hr*SEC_PER_HR
 
 
 @dataclass(frozen = True)
@@ -150,3 +158,5 @@ class ModelResult:
     ac_turn_time: float                       = None
     required_overlap: float                   = None
     effective_sweep_width: float              = None
+    search_legs_per_ac: float                 = None
+
