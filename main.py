@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from dataclasses import asdict
 import subprocess
 import sys
@@ -14,7 +15,7 @@ from lib import (
 )
 
 
-# Assumptions/givens
+# region Design Parameters
 AOI = AOI(
     ingress = 100_000, # meters
     length  = 100_000, # meters
@@ -24,9 +25,8 @@ AOI = AOI(
 
 AOI_REVISIT_TIME_HR = 6 # hours
 
-# region Design parameters
-altitudes = range(5,30,5)
-machs     = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+altitudes = np.arange(5, 25.00001, 1)
+machs     = np.arange(0.4, 0.90001, 0.025)
 sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
 # JOHNSON_CRITERIA = 2 # Recognize
@@ -160,7 +160,7 @@ def evaluate_config(config: Config) -> ModelResult:
         revisit_time = config.aoi_revisit_time_hr*SEC_PER_HR 
         )
     
-    print(f'{ac.mach}M/{ac.alt_kft}kft/{ac.sensor}: {onsta:0.2f} on-station')
+    # print(f'{ac.mach:0.1f}M/{ac.alt_kft}kft/{ac.sensor}: {onsta:0.2f} on-station')
 
     result.onsta_req_n = onsta
     result.onsta_req_cost = onsta * ac.cost

@@ -152,7 +152,7 @@ class Config:
 @dataclass
 class ModelResult:
     config: Config
-    valid: bool                               = None
+    valid: bool                               = True
     reason: str                               = None
     sensor_performance: SensorPerformance     = None
     ac_search_perf: AircraftSearchPerformance = None
