@@ -129,9 +129,9 @@ make_sensor_feasibility_plot <- function(
       fill = guide_legend(
         override.aes = list(
           # Set the transparency and border color/width for the legend box
-          alpha = 0.3,      # Transparency of the fill
-          color = active_colors, # Border color
-          linewidth = 1     # Thickness of the border line
+          alpha = 0.8,           # Transparency of the fill
+          # color = active_colors, # Border color
+          linewidth = 1          # Thickness of the border line
         )
       ),
       color = "none" # Hide the secondary color legend to avoid duplication
