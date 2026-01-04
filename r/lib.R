@@ -66,52 +66,52 @@ make_sensor_feasibility_plot <- function(
       geom_blank()
     
   } else {
-  
-  # 1. Convert tiles to spatial polygons
-  h_unique <- unique(df$mach)
-  v_unique <- unique(df$altitude_kft)
-  h_half <- (h_unique[2]-h_unique[1])/2
-  v_half <- (v_unique[2]-v_unique[1])/2
-  
-  tiles_sf <- df %>% 
-    filter(valid) %>%
-    mutate(
-      # Create the 4 corners of each tile
-      geometry = purrr::pmap(list(mach, altitude_kft), ~ {
-        m <- ..1; a <- ..2
-        st_polygon(list(matrix(c(
-          m-h_half, a-v_half,
-          m+h_half, a-v_half,
-          m+h_half, a+v_half,
-          m-h_half, a+v_half,
-          m-h_half, a-v_half
-        ), ncol = 2, byrow = TRUE)))
-      })
-    ) %>%
-    st_as_sf()
-  
-  # 2. Robust Dissolve
-  outlines_sf <- tiles_sf %>%
-    group_by(sensor) %>%
-    # A tiny buffer solves 99% of internal line issues
-    st_buffer(dist = 1e-8) %>% 
-    summarize(geometry = st_union(geometry)) %>%
-    st_make_valid() %>%
-    # Optional: Remove any internal 'holes' if you only want the outer shell
-    nngeo::st_remove_holes() %>% 
-    st_cast("MULTILINESTRING")
-  
-  # 3. Plot with Polished Legend
-  p <- ggplot() +
-    # Background Tiles
-    geom_tile(data = df_valid, 
-              aes(x = mach, y = altitude_kft, fill = sensor), alpha = 0.3) +
     
-    # Outer Outlines - use key_glyph = "rect" to force the legend shape
-    geom_sf(data = outlines_sf, aes(color = sensor), 
+    # 1. Convert tiles to spatial polygons
+    h_unique <- unique(df$mach)
+    v_unique <- unique(df$altitude_kft)
+    h_half <- (h_unique[2]-h_unique[1])/2
+    v_half <- (v_unique[2]-v_unique[1])/2
+    
+    tiles_sf <- df %>% 
+      filter(valid) %>%
+      mutate(
+        # Create the 4 corners of each tile
+        geometry = purrr::pmap(list(mach, altitude_kft), ~ {
+          m <- ..1; a <- ..2
+          st_polygon(list(matrix(c(
+            m-h_half, a-v_half,
+            m+h_half, a-v_half,
+            m+h_half, a+v_half,
+            m-h_half, a+v_half,
+            m-h_half, a-v_half
+          ), ncol = 2, byrow = TRUE)))
+        })
+      ) %>%
+      st_as_sf()
+    
+    # 2. Robust Dissolve
+    outlines_sf <- tiles_sf %>%
+      group_by(sensor) %>%
+      # A tiny buffer solves 99% of internal line issues
+      st_buffer(dist = 1e-8) %>% 
+      summarize(geometry = st_union(geometry)) %>%
+      st_make_valid() %>%
+      # Optional: Remove any internal 'holes' if you only want the outer shell
+      nngeo::st_remove_holes() %>% 
+      st_cast("MULTILINESTRING")
+  
+    # 3. Plot with Polished Legend
+    p <- ggplot() +
+      # Background Tiles
+      geom_tile(data = df_valid, 
+                aes(x = mach, y = altitude_kft, fill = sensor), alpha = 0.3) +
+      
+      # Outer Outlines - use key_glyph = "rect" to force the legend shape
+      geom_sf(data = outlines_sf, aes(color = sensor), 
               linewidth = 1, inherit.aes = FALSE, key_glyph = "rect") 
   }
-    
+  
   p +
     
     # Combine Fill and Color into one legend by giving them the same title
