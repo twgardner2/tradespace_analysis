@@ -93,20 +93,20 @@ class FOV(VGroup):
 
 class UAV(VGroup):
 
-    def __init__(self, fov_width: float, fov_deg: float, include_beam_detection_fov: bool = False, **kwargs):
+    def __init__(self, fov_width: float, fov_deg: float, w_height_det_fov: bool = False, w_beam_det_fov: bool = False, **kwargs):
         super().__init__(**kwargs)
 
         # Create the UAV as a triangle
         self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*fov_width)
 
-        # Create sensor FOV vs. design target's height dimension (shorter detection range)
-        self.fov = FOV(origin=self.uav.get_top(), cross=fov_width, angle_deg=fov_deg)
-
-        # Group UAV and FOV
-        self.add(self.uav, self.fov)
+        if w_height_det_fov:
+            # Create sensor FOV vs. design target's height dimension (shorter detection range)
+            self.fov_height = FOV(origin=self.uav.get_top(), cross=fov_width, angle_deg=fov_deg)
+            # Group UAV and FOV
+            self.add(self.uav, self.fov_height)
 
         # Optionally create sensor FOV vs. design target's length dimension (longer detection range)
-        if include_beam_detection_fov:
+        if w_beam_det_fov:
             self.fov_beaming = FOV(origin=self.uav.get_top(), cross=1.5*fov_width, angle_deg=fov_deg)
             self.add(self.fov_beaming)
 
@@ -116,7 +116,7 @@ class SensorGapWhenTurning(BaseScene):
 
 
         # Add UAV and FOV to the scene
-        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35, include_beam_detection_fov=False)
+        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = True, w_beam_det_fov=False)
         self.add(uav_group)
 
         dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
@@ -147,13 +147,13 @@ class SensorGapWhenTurning(BaseScene):
         not_covered_gap = Polygon(
             uav_group.uav.get_bottom(), 
             uav_group.uav.get_bottom() + LEFT*self.lane_width/2, 
-            uav_group.uav.get_bottom() + LEFT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov.get_bottom())*DOWN,
+            uav_group.uav.get_bottom() + LEFT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
             stroke_width=0.5
         ).set_fill(WHITE, opacity=0.3)
         not_covered_level_gap = Polygon(
             uav_group.uav.get_bottom(), 
             uav_group.uav.get_bottom() + RIGHT*self.lane_width/2, 
-            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov.get_bottom())*DOWN,
+            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
             stroke_width=0.5
         ).set_fill(WHITE, opacity=0.3)
         self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
