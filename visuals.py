@@ -18,7 +18,7 @@ class BaseScene(Scene):
 
         WIDTH = 4
         HEIGHT = 4
-        N_LANES = 4
+        self.N_LANES = 4
 
         # self.add(NumberPlane(
         #     background_line_style={
@@ -36,11 +36,11 @@ class BaseScene(Scene):
 
 
         # Create lanes in the search area
-        lane_width = search_area.width / N_LANES
+        lane_width = search_area.width / self.N_LANES
         self.lane_width = lane_width
 
         lane_boundaries = VGroup()
-        for i in range(1, N_LANES):
+        for i in range(1, self.N_LANES):
             lane_x = search_area.get_left()[0] + lane_width * i
             boundary = Line(
                 start=search_area.get_bottom() + RIGHT * lane_x,
