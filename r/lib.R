@@ -255,3 +255,76 @@ calc_elasticity <- function(
   
   return(data$elasticity)
 }
+
+
+make_elasticity_heatmap <- function(
+    df, 
+    sensor_color_scale, 
+    ALTITUDE_BOUNDS,
+    MACH_BOUNDS,
+    PLOTS_OUTPUT_PATH, 
+    filename
+) {
+  
+  ALPHA = 1
+  HEIGHT = 4
+  ASPECT_RATIO = 0.6
+  
+  out_path <- file.path(PLOTS_OUTPUT_PATH, filename)
+  
+  
+  df_long <- df %>%
+    pivot_longer(
+      cols = starts_with("elasticity_"), 
+      names_to = "elasticity_type", 
+      values_to = "value"
+    ) %>%
+    # Clean up labels for the plot facets
+    mutate(elasticity_type = gsub("elasticity_", "", elasticity_type)) %>% 
+    arrange(elasticity_type, sensor, mach, altitude_kft)
+
+  # Tile height and width ----
+  h_unique <- unique(df$mach)
+  v_unique <- unique(df$altitude_kft)
+  h_binwidth <- h_unique[2]-h_unique[1]
+  v_binwidth <- v_unique[2]-v_unique[1]
+  
+  # browser()
+  p <- ggplot(
+    data=df_long,
+    mapping=aes(x=mach, y=altitude_kft, fill=value)
+  ) +
+    
+    geom_tile(width = h_binwidth, height = v_binwidth, alpha=ALPHA, color='black') +
+    
+    facet_grid(elasticity_type~sensor) +
+    # facet_grid(elasticity_type ~ sensor, scales = "free") +
+    
+    coord_cartesian(xlim = MACH_BOUNDS, ylim = ALTITUDE_BOUNDS) +
+    
+    scale_fill_gradient2(
+      low = "green", 
+      mid = "white", 
+      high = "red", 
+      midpoint = 0,
+      name = "Elasticity"
+    ) +
+    
+    labs(
+      title = 'Elasticity Heatmap',
+      subtitle = 'Red = Negative, White = Zero, Green = Positive',
+      x = 'Mach',
+      y = 'Altitude (kft)'
+    ) +
+    
+    theme_minimal()
+  
+  p
+  ggsave(
+    filename = out_path,
+    height = HEIGHT,
+    width = HEIGHT / ASPECT_RATIO
+  )
+  return(p)
+  
+}

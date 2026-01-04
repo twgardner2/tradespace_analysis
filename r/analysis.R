@@ -84,3 +84,14 @@ df$elasticity_sensor <- calc_elasticity(
   data        = df, 
   elastic_var = 'sensor'
 )
+
+  
+  
+make_elasticity_heatmap(
+    df,
+    sensor_color_scale,
+    ALTITUDE_BOUNDS,
+    MACH_BOUNDS,
+    PLOTS_OUTPUT_PATH,
+    'elasticity.png'
+)
