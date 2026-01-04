@@ -76,7 +76,7 @@ df$elasticity_mach <- calc_elasticity(
   data        = df,
   elastic_var = 'mach'
 )
-df$elasticity_alt <- calc_elasticity(
+df$elasticity_altitude_kft <- calc_elasticity(
   data        = df,
   elastic_var = 'altitude_kft'
 )

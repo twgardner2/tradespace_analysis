@@ -238,18 +238,20 @@ calc_elasticity <- function(
 
   data <- data %>% 
     group_by(across(all_of(constant_vars))) %>% 
-    arrange(across(all_of(c(constant_vars, elastic_var)))) %>% 
+    arrange(elastic_var) %>% 
+    mutate(
+      num = ((.data[[obj_var]] - lag(.data[[obj_var]])) / lag(.data[[obj_var]])),
+      den = ((.data[[elastic_var]] - lag(.data[[elastic_var]])) / lag(.data[[elastic_var]]))
+    ) %>% 
     mutate(
       elasticity = if_else(
-        lag(.data[[obj_var]]) > 0 & lag(.data[[elastic_var]]) > 0 ,
-        
+        row_number() == 1L,
+        NA_real_,
         ((.data[[obj_var]] - lag(.data[[obj_var]])) / lag(.data[[obj_var]])) /
-        ((.data[[elastic_var]] - lag(.data[[elastic_var]])) / lag(.data[[elastic_var]])),
-        
-        NA_real_
+          ((.data[[elastic_var]] - lag(.data[[elastic_var]])) / lag(.data[[elastic_var]]))
       )
     ) %>% 
     ungroup()
-    
+  
   return(data$elasticity)
 }
