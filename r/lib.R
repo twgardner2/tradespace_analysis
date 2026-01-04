@@ -160,5 +160,66 @@ make_sensor_feasibility_plot <- function(
   return(p)
 }
 
+make_cost_heatmap <- function(
+    df, 
+    sensor_color_scale, 
+    ALTITUDE_BOUNDS,
+    MACH_BOUNDS,
+    PLOTS_OUTPUT_PATH, 
+    filename
+  ) {
+  
+  ALPHA = 1
+  HEIGHT = 4
+  ASPECT_RATIO = 0.6
+  
+  out_path <- file.path(PLOTS_OUTPUT_PATH, filename)
+  
+  df <- df %>% 
+    select(
+      valid, altitude_kft, mach, sensor, onsta_req_cost
+    ) 
+
+  # ONSTA Aircraft Cost ----
+  h_unique <- unique(df$mach)
+  v_unique <- unique(df$altitude_kft)
+  h_binwidth <- h_unique[2]-h_unique[1]
+  v_binwidth <- v_unique[2]-v_unique[1]
+  
+  p <- ggplot(
+      data=df,
+      mapping=aes(x=mach, y=altitude_kft, fill=onsta_req_cost)
+    ) +
+      
+    geom_tile(width = h_binwidth, height = v_binwidth, alpha=ALPHA) +
+
+    facet_wrap(~sensor) +
+    
+    scale_x_continuous(limits = MACH_BOUNDS) +
+    scale_y_continuous(limits = ALTITUDE_BOUNDS) +
+
+    scale_fill_gradientn(
+      colors = c("green", "white", "red"),
+      transform = 'log10'
+    ) +
+    
+    labs(
+      title='ONSTA Aircraft Cost by Sensor',
+      x='Mach',
+      y='Altitude (kft)',
+      fill='Cost ($M)',
+      color='Sensor Type'
+    ) +
+    
+    theme_minimal()
+  
+  p
+  ggsave(
+    filename = out_path,
+    height = HEIGHT,
+    width = HEIGHT / ASPECT_RATIO
+  )
+  return(p)
+
   
 }

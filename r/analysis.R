@@ -54,6 +54,16 @@ p2 <- make_sensor_feasibility_plot(
 )
 
 
+## Cost plots
+p3 <- make_cost_heatmap(
+  df, 
+  sensor_color_scale, 
+  ALTITUDE_BOUNDS,
+  MACH_BOUNDS,
+  PLOTS_OUTPUT_PATH, 
+  'onsta_cost_by_mach_alt_sensor.png'
+)
 
+  
+  
 
-# ggsave('sensor_v_cost.png')
