@@ -38,7 +38,7 @@ make_sensor_feasibility_plot_myOriginalThatSucked <- function(model_output, PLOT
   return(p)
 }
 
-make_sensor_feasibility_plot <- function(model_output, PLOTS_OUTPUT_PATH, filename) {
+make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS_OUTPUT_PATH, filename) {
 
   HEIGHT = 4
   ASPECT_RATIO = 0.6
@@ -48,12 +48,15 @@ make_sensor_feasibility_plot <- function(model_output, PLOTS_OUTPUT_PATH, filena
       valid, altitude_kft, mach, sensor
     )
   
+  df_valid <- df %>% filter(valid)
+  sensors_present <- unique(df_valid$sensor)
+  active_colors <- sensor_color_scale[names(sensor_color_scale) %in% sensors_present]
+  
   # 1. Convert tiles to spatial polygons
   h_unique <- unique(df$mach)
   v_unique <- unique(df$altitude_kft)
   h_half <- (h_unique[2]-h_unique[1])/2
   v_half <- (v_unique[2]-v_unique[1])/2
-  
   
   tiles_sf <- df %>% 
     filter(valid) %>%
@@ -83,11 +86,10 @@ make_sensor_feasibility_plot <- function(model_output, PLOTS_OUTPUT_PATH, filena
     nngeo::st_remove_holes() %>% 
     st_cast("MULTILINESTRING")
   
-  
   # 3. Plot with Polished Legend
   p <- ggplot() +
     # Background Tiles
-    geom_tile(data = df %>% filter(valid), 
+    geom_tile(data = df_valid, 
               aes(x = mach, y = altitude_kft, fill = sensor), alpha = 0.3) +
     
     # Outer Outlines - use key_glyph = "rect" to force the legend shape
@@ -98,8 +100,8 @@ make_sensor_feasibility_plot <- function(model_output, PLOTS_OUTPUT_PATH, filena
     scale_y_continuous(breaks = seq(5, 25, by = 5)) +
     
     # Combine Fill and Color into one legend by giving them the same title
-    scale_fill_manual(values = sensor_color_scale, name = "Sensor Type") +
-    scale_color_manual(values = sensor_color_scale, name = "Sensor Type") +
+    scale_fill_manual(values = active_colors, name = "Sensor Type") +
+    scale_color_manual(values = active_colors, name = "Sensor Type") +
     
     labs(
       title = 'Mach/Altitude Feasibility Envelope by Sensor',
@@ -112,7 +114,7 @@ make_sensor_feasibility_plot <- function(model_output, PLOTS_OUTPUT_PATH, filena
         override.aes = list(
           # Set the transparency and border color/width for the legend box
           alpha = 0.3,      # Transparency of the fill
-          color = sensor_color_scale, # Border color
+          color = active_colors, # Border color
           linewidth = 1     # Thickness of the border line
         )
       ),

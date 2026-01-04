@@ -24,7 +24,7 @@ df <- df %>%
 
 # Visualize data
 sensor_color_scale <- RColorBrewer::brewer.pal(3, 'Dark2')
-
+names(sensor_color_scale) <- unique(df$sensor)
 ## Feasibility plot
 
 p1 <- make_sensor_feasibility_plot_myOriginalThatSucked(
@@ -36,6 +36,7 @@ p1 <- make_sensor_feasibility_plot_myOriginalThatSucked(
 
 p2 <- make_sensor_feasibility_plot(
   df,
+  sensor_color_scale,
   PLOTS_OUTPUT_PATH,
   'sensor_feasibility.png'
 )
