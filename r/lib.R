@@ -52,6 +52,13 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
   sensors_present <- unique(df_valid$sensor)
   active_colors <- sensor_color_scale[names(sensor_color_scale) %in% sensors_present]
   
+  if(nrow(df_valid) <= 0) {
+    
+    p <- ggplot() +
+      geom_blank()
+    
+  } else {
+  
   # 1. Convert tiles to spatial polygons
   h_unique <- unique(df$mach)
   v_unique <- unique(df$altitude_kft)
@@ -94,8 +101,10 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
     
     # Outer Outlines - use key_glyph = "rect" to force the legend shape
     geom_sf(data = outlines_sf, aes(color = sensor), 
-            linewidth = 1, inherit.aes = FALSE, key_glyph = "rect") +
+              linewidth = 1, inherit.aes = FALSE, key_glyph = "rect") 
+  }
     
+  p +
     scale_x_continuous(breaks = seq(0.4, 0.9, by = 0.1)) +
     scale_y_continuous(breaks = seq(5, 25, by = 5)) +
     
@@ -105,7 +114,8 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
     
     labs(
       title = 'Mach/Altitude Feasibility Envelope by Sensor',
-      x = "Mach", y = "Altitude (kft)"
+      x     = "Mach",
+      y     = "Altitude (kft)"
     ) +
     
     # Override the legend appearance to show the border and fill correctly
@@ -137,5 +147,7 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
     width = HEIGHT / ASPECT_RATIO
   )
   return(p)
+}
+
   
 }
