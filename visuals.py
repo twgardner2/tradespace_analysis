@@ -112,6 +112,81 @@ class UAV(VGroup):
             self.add(self.fov_beaming)
 
 
+class DesignTarget(VGroup):
+
+    def __init__(self, debug=False, **kwargs):
+        super().__init__(**kwargs)
+
+        # Create the target as a triangle
+        self.triangle = Triangle(color=RED, fill_opacity=1).scale(0.2)
+        self.add(self.triangle)
+
+        if debug:
+            self.bow_dot = Dot(self.triangle.get_top(), color=BLUE)
+            self.bow_dot.align_to(self.triangle, UP)
+            self.add(self.bow_dot)
+
+
+
+
+class LawnMower(BaseScene):
+    def construct(self):
+
+        # Add some targets to the scene
+        tgt1 = DesignTarget()
+        tgt1.move_to(0.8*DOWN + 1.3*RIGHT)
+        tgt1.rotate(-PI/3)
+        self.add(tgt1)
+
+        # Add UAV and FOV to the scene
+        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+        self.add(uav_group)
+
+        end_first_leg              = 1.5*LEFT  + 1*UP + (uav_group.get_top() - uav_group.get_center())*DOWN
+        end_first_leg_turn_point   = 1  *LEFT  + 1*UP 
+        end_second_leg             = 0.5*LEFT  + 3*DOWN + (uav_group.get_top() - uav_group.get_center())*UP
+        end_second_leg_turn_point  = 0  *LEFT  + 3*DOWN 
+        end_third_leg              = 0.5*RIGHT + 1*UP + (uav_group.get_top() - uav_group.get_center())*DOWN
+        end_third_leg_turn_point   = 1  *RIGHT + 1*UP 
+        end_fourth_leg             = 1.5*RIGHT + 3*DOWN + (uav_group.get_top() - uav_group.get_center())*UP
+
+        # Define the target's slow movement animation
+        tgt1_animation = tgt1.animate.shift(2 * RIGHT).set_run_time(10).set_rate_func(linear)
+
+        # Combine UAV animations and target animation
+        self.play(
+            AnimationGroup(
+                Succession(
+                    ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
+                    Rotate(
+                        uav_group, 
+                        angle=-PI, 
+                        about_point=end_first_leg_turn_point,
+                        rate_func=linear
+                    ),
+                    ApplyMethod(uav_group.move_to, end_second_leg, rate_func=linear),
+                    Rotate(
+                        uav_group, 
+                        angle=PI, 
+                        about_point=end_second_leg_turn_point,
+                        rate_func=linear
+                    ),
+                    ApplyMethod(uav_group.move_to, end_third_leg, rate_func=linear),
+                    Rotate(
+                        uav_group, 
+                        angle=-PI, 
+                        about_point=end_third_leg_turn_point,
+                        rate_func=linear
+                    ),
+                    ApplyMethod(uav_group.move_to, end_fourth_leg, rate_func=linear),
+                ),
+                tgt1_animation,
+                lag_ratio=0  # Ensure both animations run simultaneously
+            )
+        )
+
+        self.wait()
+
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
