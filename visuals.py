@@ -98,12 +98,13 @@ class UAV(VGroup):
 
         # Create the UAV as a triangle
         self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*fov_width)
+        self.add(self.uav)
 
         if w_height_det_fov:
             # Create sensor FOV vs. design target's height dimension (shorter detection range)
             self.fov_height = FOV(origin=self.uav.get_top(), cross=fov_width, angle_deg=fov_deg)
             # Group UAV and FOV
-            self.add(self.uav, self.fov_height)
+            self.add(self.fov_height)
 
         # Optionally create sensor FOV vs. design target's length dimension (longer detection range)
         if w_beam_det_fov:
