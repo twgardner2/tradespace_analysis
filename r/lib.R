@@ -14,6 +14,7 @@ make_sensor_feasibility_plot_myOriginalThatSucked <- function(model_output, PLOT
   v_unique <- unique(df$altitude_kft)
   h_binwidth <- h_unique[2]-h_unique[1]
   v_binwidth <- v_unique[2]-v_unique[1]
+  
   alpha <- 0.7
   
   p <- ggplot(
@@ -38,7 +39,14 @@ make_sensor_feasibility_plot_myOriginalThatSucked <- function(model_output, PLOT
   return(p)
 }
 
-make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS_OUTPUT_PATH, filename) {
+make_sensor_feasibility_plot <- function(
+    model_output, 
+    sensor_color_scale,
+    ALTITUDE_BOUNDS,
+    MACH_BOUNDS,
+    PLOTS_OUTPUT_PATH, 
+    filename
+  ) {
 
   HEIGHT = 4
   ASPECT_RATIO = 0.6
@@ -105,8 +113,6 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
   }
     
   p +
-    scale_x_continuous(breaks = seq(0.4, 0.9, by = 0.1)) +
-    scale_y_continuous(breaks = seq(5, 25, by = 5)) +
     
     # Combine Fill and Color into one legend by giving them the same title
     scale_fill_manual(values = active_colors, name = "Sensor Type") +
@@ -131,7 +137,12 @@ make_sensor_feasibility_plot <- function(model_output, sensor_color_scale, PLOTS
       color = "none" # Hide the secondary color legend to avoid duplication
     ) +
     
-    coord_sf(expand = TRUE) + 
+    coord_sf(
+      expand = TRUE,
+      xlim   = MACH_BOUNDS,
+      ylim   = ALTITUDE_BOUNDS
+    ) + 
+
     theme_minimal() + 
     theme(
       plot.title = element_text(hjust = 0.5),

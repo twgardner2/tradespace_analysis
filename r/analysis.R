@@ -11,15 +11,25 @@ PLOTS_OUTPUT_PATH <- file.path(getwd(), 'output/plots')
 
 
 # Read data
-df <- readr::read_csv('./output/model_output.csv') 
+df_raw <- readr::read_csv('./output/model_output.csv') 
 
 # Clean data
+df <- df_raw
+## Clean names
 names(df) <- gsub('config_', '', names(df))
 df <- df %>% 
   mutate(
     sensor = stringr::str_remove(sensor, 'Sensor.'),
     sensor = factor(sensor, levels=c('LOW', 'MED', 'HIGH'))
   )
+
+## Get bounds from unfiltered data to pass to plots
+ALTITUDE_BOUNDS <- range(df$altitude_kft)
+MACH_BOUNDS     <- range(df$mach)
+
+## Filter out invalid/infeasible cases
+df <- df %>% 
+  filter(valid)
 
 
 # Visualize data
@@ -37,6 +47,8 @@ p1 <- make_sensor_feasibility_plot_myOriginalThatSucked(
 p2 <- make_sensor_feasibility_plot(
   df,
   sensor_color_scale,
+  ALTITUDE_BOUNDS,
+  MACH_BOUNDS,
   PLOTS_OUTPUT_PATH,
   'sensor_feasibility.png'
 )
