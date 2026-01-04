@@ -53,14 +53,13 @@ make_sensor_feasibility_plot <- function(
   
   df <- model_output %>% 
     select(
-      valid, altitude_kft, mach, sensor
+      altitude_kft, mach, sensor
     )
   
-  df_valid <- df %>% filter(valid)
-  sensors_present <- unique(df_valid$sensor)
+  sensors_present <- unique(df$sensor)
   active_colors <- sensor_color_scale[names(sensor_color_scale) %in% sensors_present]
   
-  if(nrow(df_valid) <= 0) {
+  if(nrow(df) <= 0) {
     
     p <- ggplot() +
       geom_blank()
@@ -74,7 +73,6 @@ make_sensor_feasibility_plot <- function(
     v_half <- (v_unique[2]-v_unique[1])/2
     
     tiles_sf <- df %>% 
-      filter(valid) %>%
       mutate(
         # Create the 4 corners of each tile
         geometry = purrr::pmap(list(mach, altitude_kft), ~ {
@@ -104,7 +102,7 @@ make_sensor_feasibility_plot <- function(
     # 3. Plot with Polished Legend
     p <- ggplot() +
       # Background Tiles
-      geom_tile(data = df_valid, 
+      geom_tile(data = df, 
                 aes(x = mach, y = altitude_kft, fill = sensor), alpha = 0.3) +
       
       # Outer Outlines - use key_glyph = "rect" to force the legend shape
@@ -177,7 +175,7 @@ make_cost_heatmap <- function(
   
   df <- df %>% 
     select(
-      valid, altitude_kft, mach, sensor, onsta_req_cost
+      altitude_kft, mach, sensor, onsta_req_cost
     ) 
 
   # ONSTA Aircraft Cost ----
@@ -222,4 +220,36 @@ make_cost_heatmap <- function(
   return(p)
 
   
+}
+
+
+calc_elasticity <- function(
+    data         = df,
+    obj_var      = 'onsta_req_cost',
+    elastic_var,
+    doe_vars     = c('altitude_kft', 'sensor', 'mach') 
+  ) {
+
+  constant_vars <- setdiff(doe_vars, elastic_var)
+  
+  if(elastic_var == 'sensor') {
+    elastic_var <- 'sensor_assumption_cost'
+  }
+
+  data <- data %>% 
+    group_by(across(all_of(constant_vars))) %>% 
+    arrange(across(all_of(c(constant_vars, elastic_var)))) %>% 
+    mutate(
+      elasticity = if_else(
+        lag(.data[[obj_var]]) > 0 & lag(.data[[elastic_var]]) > 0 ,
+        
+        ((.data[[obj_var]] - lag(.data[[obj_var]])) / lag(.data[[obj_var]])) /
+        ((.data[[elastic_var]] - lag(.data[[elastic_var]])) / lag(.data[[elastic_var]])),
+        
+        NA_real_
+      )
+    ) %>% 
+    ungroup()
+    
+  return(data$elasticity)
 }
