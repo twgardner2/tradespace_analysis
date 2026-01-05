@@ -213,23 +213,20 @@ class MyWarship(VGroup):
         super().__init__(**kwargs)
 
         HAZE_GREY = ManimColor.from_hex('#939393')
-        LENGTH = 160
-        HEIGHT = 40
-        BEAM = 20
+        self.LENGTH_M       = 160
+        self.HEIGHT_M       = 40
+        self.BEAM_M         = 20
+        self.LENGTH         = 6
+        self.SCALING_FACTOR = self.LENGTH/self.LENGTH_M
 
-        HULL_Z = 0.3 * HEIGHT
-        HULL_X = LENGTH
-        HULL_Y = BEAM
+        self.HULL_DIM           = [self.SCALING_FACTOR * x for x in [self.LENGTH_M, self.BEAM_M, 0.3*self.HEIGHT_M]]
+        self.SUPERSTRUCTURE_DIM = [self.SCALING_FACTOR * x for x in [0.2*self.LENGTH_M, 0.75*self.BEAM_M, 0.2*self.HEIGHT_M]]
 
-        SUPERSTRUCTURE_Z = 0.2 * HEIGHT
-        SUPERSTRUCTURE_X = 0.2 * LENGTH
-        SUPERSTRUCTURE_Y = 0.75 * BEAM
-
-        MAST_HEIGHT = 0.5 * HEIGHT
-
+        self.MAST_HEIGHT = self.SCALING_FACTOR * 0.5 * self.HEIGHT_M
+        self.MAST_RADIUS = self.SCALING_FACTOR * 0.2 * self.BEAM_M
         # --- Hull ---
         hull = Cube()
-        hull.scale([(6 / 160) * x for x in [HULL_X, HULL_Y, HULL_Z]])
+        hull.scale(self.HULL_DIM)
         hull.set_color(HAZE_GREY)
         hull.set_stroke(color=BLACK, width=1)  # Add black outline
         hull.set_fill(opacity=1)  # Make opaque
@@ -237,18 +234,16 @@ class MyWarship(VGroup):
 
         # --- Superstructure ---
         superstructure = Cube()
-        superstructure.scale([(6 / 160) * x for x in [SUPERSTRUCTURE_X, SUPERSTRUCTURE_Y, SUPERSTRUCTURE_Z]])
+        superstructure.scale(self.SUPERSTRUCTURE_DIM)
         superstructure.set_color(GREY_B)
         superstructure.set_stroke(color=BLACK, width=1)  # Add black outline
-        # Make opaque
-        # superstructure.shift((6/160)*(0.35*HULL_X*LEFT)).align_to(hull, DOWN + OUT)
-        superstructure.next_to(hull, OUT, buff=0).shift((6/160)*0.15*HULL_X*LEFT)
+        superstructure.next_to(hull, OUT, buff=0).shift(0.15*self.HULL_DIM[0]*LEFT)
 
         # --- Mast ---
         mast = Cylinder(
-            radius=6/160*0.2*BEAM,
-            height=(6/160)*MAST_HEIGHT,
-            direction=OUT
+            radius    = self.MAST_RADIUS,
+            height    = self.MAST_HEIGHT,
+            direction = OUT
         )
         mast.set_color(HAZE_GREY)
         mast.set_stroke(color=BLACK, width=1)  # Add black outline
