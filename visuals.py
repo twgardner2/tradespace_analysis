@@ -138,6 +138,62 @@ class DesignTarget(VGroup):
             self.add(self.bow_dot)
 
 
+class Ship(VGroup):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Create the hull of the ship
+        hull = Polygon(
+            [-6, -1, 0],
+            [4, -1, 0],
+            [5.5, -0.6, 0],
+            [3.5, -0.6, 0],
+            [3, 0, 0],
+            [1, 0, 0],
+            [0.5, 0.4, 0],
+            [-1, 0.4, 0],
+            [-1.5, 0, 0],
+            [-5.5, 0, 0],
+            color=GRAY
+        ).set_fill(GRAY_E, opacity=1)
+
+        # Create the superstructure
+        superstructure = Rectangle(
+            width=2.5,
+            height=0.8,
+            color=GRAY_B
+        ).set_fill(GRAY_C, opacity=1).shift(UP * 0.2 + RIGHT * 0.5)
+
+        # Create the bridge
+        bridge = Rectangle(
+            width=1.0,
+            height=0.5,
+            color=GRAY_A
+        ).set_fill(GRAY_B, opacity=1).shift(UP * 0.7 + RIGHT * 0.6)
+
+        # Create the mast
+        mast = Line(
+            start=UP * 1.0 + RIGHT * 0.6,
+            end=UP * 1.8 + RIGHT * 0.6,
+            color=GRAY
+        )
+
+        # Create the gun base
+        gun_base = Rectangle(
+            width=0.6,
+            height=0.3,
+            color=GRAY_D
+        ).set_fill(GRAY_D, opacity=1).shift(LEFT * 2.5)
+
+        # Create the gun barrel
+        gun_barrel = Rectangle(
+            width=0.8,
+            height=0.1,
+            color=GRAY_D
+        ).set_fill(GRAY_D, opacity=1).shift(LEFT * 2.1 + UP * 0.05)
+
+        # Add all components to the ship
+        self.add(hull, superstructure, bridge, mast, gun_base, gun_barrel)
 
 
 class a_LawnMower(BaseScene):
