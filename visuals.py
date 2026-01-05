@@ -267,18 +267,8 @@ class b_DesignTargetIntro(ThreeDScene):
 
         self.renderer.camera.frame_rate = 6
 
-        # Camera
-        self.set_camera_orientation(
-            phi=75 * DEGREES,
-            theta=20 * DEGREES,
-            zoom=0.2
-        )
-        ship = MyWarship()
-        # Disable lighting (faster, clearer)
-        for part in ship:
-            part.set_shade_in_3d(False)
-
-        # Axes (optional)
+        # region: Setup objects ================================================
+        ## Axes ----------------------------------------------------------------
         axes = ThreeDAxes(
             x_range=(-5, 5, 1),
             y_range=(-5, 5, 1),
@@ -288,55 +278,113 @@ class b_DesignTargetIntro(ThreeDScene):
             z_length=5
         ).set_opacity(0.8)
 
-        # Set axis colors
         axes.x_axis.set_color(BLUE)
         axes.y_axis.set_color(RED)
         axes.z_axis.set_color(GREEN)
+        
+        ## Ship ----------------------------------------------------------------
+        ship = MyWarship()
+        # Disable lighting (faster, clearer)
+        for part in ship:
+            part.set_shade_in_3d(False)
+        
+        # Length dimension arrow and label  ------------------------------------
+        length_arrow = BraceBetweenPoints(
+            ship.get_left(),
+            ship.get_right(),
+            direction=UP,
+            color=WHITE
+        ).shift(1.3*OUT)
+        length_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
+        # Add text to display the length of the ship
+        length_text = Text("150 m Length", font_size=40, color=WHITE)
+        length_text.next_to(length_arrow, OUT, buff=0.6)
+        length_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
+        length_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
+        
+        height_arrow = BraceBetweenPoints(
+            ship.get_top(),
+            ship.get_bottom(),
+            direction=LEFT,
+            color=WHITE
+        ).shift(6*LEFT)
+        height_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
+        # Add text to display the length of the ship
+        height_text = Text("40 m Height", font_size=40, color=WHITE)
+        height_text.next_to(height_arrow, LEFT, buff=0.6)
+        height_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
+        height_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
 
+
+        ## Add initial objects -------------------------------------------------
         self.add(axes)
-
-        # self.add(axes, ship)
         self.add(ship)
+        #-endregion-------------------------------------------------------------
+
+        # Camera
+        self.set_camera_orientation(
+            phi=75 * DEGREES,
+            theta=20 * DEGREES,
+            zoom=0.2
+        )
         self.wait(1)
 
+        # Animate the arrow and text fading in while moving the camera simultaneously
+        self.play(
+            FadeIn(length_arrow),
+            FadeIn(length_text),
+            FadeIn(height_arrow),
+            FadeIn(height_text),
+            run_time=1
+        )
+
         self.move_camera(
-            zoom=1.0,
+            phi=80 * DEGREES,
+            theta=115 * DEGREES,
+            zoom=0.9,
             run_time=2
         )
 
+        self.move_camera(
+            phi = 90*DEGREES,
+            theta = 65*DEGREES,
+            run_time=2.5
+        )
+
+        self.play(
+            FadeOut(length_arrow),
+            FadeOut(length_text),
+            FadeOut(height_arrow),
+            FadeOut(height_text),
+            run_time=2
+        )
+        # self.wait(1)
+
+        self.move_camera(
+            phi = 85*DEGREES,
+            theta = -15*DEGREES,
+            run_time=1
+        )
+        # self.play(FadeOut(length_arrow), FadeOut(length_text))
+
         # --- Rotations ---
 
-        # Yaw
-        self.move_camera(theta=115 * DEGREES, run_time=1.5)
-        self.move_camera(phi = 90*DEGREES, theta=90 * DEGREES, run_time=1.0)
+        # self.move_camera(theta=115 * DEGREES, run_time=1)
+        # self.move_camera(theta=65 * DEGREES, run_time=1)
+        # self.move_camera(theta=90 * DEGREES, run_time=1)
+        # self.move_camera(phi=90 * DEGREES, run_time=1)
+        # self.move_camera(phi=60 * DEGREES, run_time=1)
+        # self.move_camera(phi=75 * DEGREES, run_time=1)
+        # self.move_camera(phi = 90*DEGREES, theta=90 * DEGREES, run_time=1.0)
 
-        # Add engineering-style arrows to show the length of the ship
-        length_arrow = DoubleArrow(
-            start=ship.get_left(),
-            end=ship.get_right(),
-            buff=0,
-            color=WHITE,
-            stroke_width=3,
-            tip_length=0.5  # Set tip_length to 0 to ensure exact alignment
-        )
-        length_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
 
-        # Add text to display the length of the ship
-        length_text = Text("150 m Length", font_size=40, color=WHITE)
-        length_text.next_to(length_arrow, OUT, buff=0.8)
-        length_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
-        length_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
 
-        # Animate the arrow and text fading in, waiting, and fading out
-        self.play(FadeIn(length_arrow), FadeIn(length_text))
-        self.wait(1)
-        self.move_camera(phi = 75*DEGREES, theta=90 * DEGREES, run_time=1.0)
-        self.wait(1)
-        self.play(FadeOut(length_arrow), FadeOut(length_text))
+
+
 
         self.wait(2)
 
-        self.move_camera(theta=-0 * DEGREES, run_time=2)
+        # self.move_camera(theta=-0 * DEGREES, run_time=2)
         # self.move_camera(phi = 90*DEGREES, run_time=2)
         # self.move_camera(phi=80 * DEGREES, theta=75 * DEGREES, run_time=2)
         # self.move_camera(phi=90 * DEGREES, theta=-75 * DEGREES, run_time=2)
