@@ -266,6 +266,105 @@ class a_LawnMower(BaseScene):
 
         self.wait()
 
+class MyWarship(VGroup):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        HAZE_GREY = ManimColor.from_hex('#939393')
+
+        # --- Hull ---
+        hull = Cube()
+        hull.scale([6.0, 0.8, 0.6])  # length, beam, height
+        hull.set_color(HAZE_GREY)
+        hull.shift(DOWN * 0.2)
+
+        # --- Superstructure ---
+        superstructure = Cube()
+        superstructure.scale([1.8, 0.6, 0.7])
+        superstructure.set_color(GREY_B)
+        superstructure.shift(UP * 0.35 + LEFT * 1.0)
+
+        # --- Bridge ---
+        bridge = Cube()
+        bridge.scale([0.9, 0.4, 0.4])
+        bridge.set_color(GREY_B)
+        bridge.shift(UP * 0.75 + LEFT * 1.2)
+
+        # --- Mast ---
+        mast = Cylinder(
+            radius=0.05,
+            height=1.0,
+            direction=UP
+        )
+        mast.set_color(GREY_B)
+        mast.shift(UP * 1.3 + LEFT * 1.2)
+
+        # Group ship
+        ship = VGroup(hull, superstructure, bridge, mast)
+        ship.rotate(-2*PI , axis=RIGHT)  # Rotate to make the ship horizontal
+        ship.rotate(PI / 2, axis=OUT)  # Rotate to make the ship horizontal
+        ship.move_to(ORIGIN)
+
+        self.add(ship)
+
+
+class Warship3D(ThreeDScene):
+    def construct(self):
+
+        self.renderer.camera.frame_rate = 6
+
+        # Camera
+        self.set_camera_orientation(
+            phi=30 * DEGREES,
+            theta=-0 * DEGREES,
+            zoom=0.2
+        )
+        ship = MyWarship()
+        # Disable lighting (faster, clearer)
+        for part in ship:
+            part.set_shade_in_3d(False)
+
+        # Axes (optional)
+        # axes = ThreeDAxes(
+        #     x_range=(-5, 5, 1),
+        #     y_range=(-5, 5, 1),
+        #     z_range=(-3, 3, 1),
+        #     x_length=8,
+        #     y_length=8,
+        #     z_length=5
+        # ).set_opacity(0.2)
+
+        # self.add(axes, ship)
+        self.add(ship)
+        self.wait(1)
+
+        self.move_camera(
+            zoom=1.0,
+            run_time=2
+        )
+
+        # --- Rotations ---
+
+        # Yaw
+        self.play(Rotate(ship, angle=75 * DEGREES, axis=UP), run_time=2)
+        # self.play(Rotate(ship, angle=-90 * DEGREES, axis=UP), run_time=2)
+
+        # Pitch
+
+        # # Roll
+        # self.play(Rotate(ship, angle=90 * DEGREES, axis=OUT), run_time=2)
+        # self.play(Rotate(ship, angle=-90 * DEGREES, axis=OUT), run_time=2)
+
+        # Combined rigid-body rotation
+        # self.play(
+        #     ship.animate
+        #         .rotate(30 * DEGREES, axis=UP)
+        #         .rotate(-10 * DEGREES, axis=RIGHT)
+        #         .rotate(10 * DEGREES, axis=OUT),
+        #     run_time=3
+        # )
+
+        self.wait(2)
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
