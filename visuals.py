@@ -3,11 +3,11 @@
 # ffmpeg -i SceneName.mp4 -vf "fps=30,scale=720:-1:flags=lanczos,palettegen" palette.png
 # ffmpeg -i SceneName.mp4 -i palette.png -filter_complex "fps=30,scale=720:-1:flags=lanczos[x];[x][1:v]paletteuse" output.gif
 
-
+# manim -pql --disable_caching --fps 5 ./visuals.py Warship3D
 
 from manim import *
 import math
-
+import numpy as np
 
 TEXT_WRITE_TIME = 1 # seconds
 
@@ -103,7 +103,7 @@ class UAV(VGroup):
             [0, 0.3, 0],       # Top (sharper point)
             color=YELLOW, fill_opacity=1
         ).scale(0.9).move_to(2*DOWN + LEFT * (3/2)*fov_width)
-        
+
         self.add(self.uav)
 
         if w_height_det_fov:
@@ -136,64 +136,6 @@ class DesignTarget(VGroup):
             self.bow_dot = Dot(self.triangle.get_top(), color=BLUE)
             self.bow_dot.align_to(self.triangle, UP)
             self.add(self.bow_dot)
-
-
-class Ship(VGroup):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # Create the hull of the ship
-        hull = Polygon(
-            [-6, -1, 0],
-            [4, -1, 0],
-            [5.5, -0.6, 0],
-            [3.5, -0.6, 0],
-            [3, 0, 0],
-            [1, 0, 0],
-            [0.5, 0.4, 0],
-            [-1, 0.4, 0],
-            [-1.5, 0, 0],
-            [-5.5, 0, 0],
-            color=GRAY
-        ).set_fill(GRAY_E, opacity=1)
-
-        # Create the superstructure
-        superstructure = Rectangle(
-            width=2.5,
-            height=0.8,
-            color=GRAY_B
-        ).set_fill(GRAY_C, opacity=1).shift(UP * 0.2 + RIGHT * 0.5)
-
-        # Create the bridge
-        bridge = Rectangle(
-            width=1.0,
-            height=0.5,
-            color=GRAY_A
-        ).set_fill(GRAY_B, opacity=1).shift(UP * 0.7 + RIGHT * 0.6)
-
-        # Create the mast
-        mast = Line(
-            start=UP * 1.0 + RIGHT * 0.6,
-            end=UP * 1.8 + RIGHT * 0.6,
-            color=GRAY
-        )
-
-        # Create the gun base
-        gun_base = Rectangle(
-            width=0.6,
-            height=0.3,
-            color=GRAY_D
-        ).set_fill(GRAY_D, opacity=1).shift(LEFT * 2.5)
-
-        # Create the gun barrel
-        gun_barrel = Rectangle(
-            width=0.8,
-            height=0.1,
-            color=GRAY_D
-        ).set_fill(GRAY_D, opacity=1).shift(LEFT * 2.1 + UP * 0.05)
-
-        # Add all components to the ship
-        self.add(hull, superstructure, bridge, mast, gun_base, gun_barrel)
 
 
 class a_LawnMower(BaseScene):
@@ -271,52 +213,64 @@ class MyWarship(VGroup):
         super().__init__(**kwargs)
 
         HAZE_GREY = ManimColor.from_hex('#939393')
+        LENGTH = 160
+        HEIGHT = 40
+        BEAM = 20
+
+        HULL_Z = 0.3 * HEIGHT
+        HULL_X = LENGTH
+        HULL_Y = BEAM
+
+        SUPERSTRUCTURE_Z = 0.2 * HEIGHT
+        SUPERSTRUCTURE_X = 0.2 * LENGTH
+        SUPERSTRUCTURE_Y = 0.75 * BEAM
+
+        MAST_HEIGHT = 0.5 * HEIGHT
 
         # --- Hull ---
         hull = Cube()
-        hull.scale([6.0, 0.8, 0.6])  # length, beam, height
+        hull.scale([(6 / 160) * x for x in [HULL_X, HULL_Y, HULL_Z]])
         hull.set_color(HAZE_GREY)
-        hull.shift(DOWN * 0.2)
+        hull.set_stroke(color=BLACK, width=1)  # Add black outline
+        hull.set_fill(opacity=1)  # Make opaque
+
 
         # --- Superstructure ---
         superstructure = Cube()
-        superstructure.scale([1.8, 0.6, 0.7])
+        superstructure.scale([(6 / 160) * x for x in [SUPERSTRUCTURE_X, SUPERSTRUCTURE_Y, SUPERSTRUCTURE_Z]])
         superstructure.set_color(GREY_B)
-        superstructure.shift(UP * 0.35 + LEFT * 1.0)
-
-        # --- Bridge ---
-        bridge = Cube()
-        bridge.scale([0.9, 0.4, 0.4])
-        bridge.set_color(GREY_B)
-        bridge.shift(UP * 0.75 + LEFT * 1.2)
+        superstructure.set_stroke(color=BLACK, width=1)  # Add black outline
+        # Make opaque
+        # superstructure.shift((6/160)*(0.35*HULL_X*LEFT)).align_to(hull, DOWN + OUT)
+        superstructure.next_to(hull, OUT, buff=0).shift((6/160)*0.15*HULL_X*LEFT)
 
         # --- Mast ---
         mast = Cylinder(
-            radius=0.05,
-            height=1.0,
-            direction=UP
+            radius=6/160*0.2*BEAM,
+            height=(6/160)*MAST_HEIGHT,
+            direction=OUT
         )
-        mast.set_color(GREY_B)
-        mast.shift(UP * 1.3 + LEFT * 1.2)
+        mast.set_color(HAZE_GREY)
+        mast.set_stroke(color=BLACK, width=1)  # Add black outline
+        mast.set_fill(opacity=1)  # Make opaque
+        mast.next_to(superstructure, OUT, buff=0)
 
         # Group ship
-        ship = VGroup(hull, superstructure, bridge, mast)
-        ship.rotate(-2*PI , axis=RIGHT)  # Rotate to make the ship horizontal
-        ship.rotate(PI / 2, axis=OUT)  # Rotate to make the ship horizontal
-        ship.move_to(ORIGIN)
+        ship = VGroup(hull, superstructure, mast)
+        # ship.move_to(ORIGIN)
 
         self.add(ship)
 
 
-class Warship3D(ThreeDScene):
+class b_DesignTargetIntro(ThreeDScene):
     def construct(self):
 
         self.renderer.camera.frame_rate = 6
 
         # Camera
         self.set_camera_orientation(
-            phi=30 * DEGREES,
-            theta=-0 * DEGREES,
+            phi=75 * DEGREES,
+            theta=20 * DEGREES,
             zoom=0.2
         )
         ship = MyWarship()
@@ -325,14 +279,21 @@ class Warship3D(ThreeDScene):
             part.set_shade_in_3d(False)
 
         # Axes (optional)
-        # axes = ThreeDAxes(
-        #     x_range=(-5, 5, 1),
-        #     y_range=(-5, 5, 1),
-        #     z_range=(-3, 3, 1),
-        #     x_length=8,
-        #     y_length=8,
-        #     z_length=5
-        # ).set_opacity(0.2)
+        axes = ThreeDAxes(
+            x_range=(-5, 5, 1),
+            y_range=(-5, 5, 1),
+            z_range=(-3, 3, 1),
+            x_length=18,
+            y_length=15,
+            z_length=5
+        ).set_opacity(0.8)
+
+        # Set axis colors
+        axes.x_axis.set_color(BLUE)
+        axes.y_axis.set_color(RED)
+        axes.z_axis.set_color(GREEN)
+
+        self.add(axes)
 
         # self.add(axes, ship)
         self.add(ship)
@@ -346,8 +307,39 @@ class Warship3D(ThreeDScene):
         # --- Rotations ---
 
         # Yaw
-        self.play(Rotate(ship, angle=75 * DEGREES, axis=UP), run_time=2)
-        # self.play(Rotate(ship, angle=-90 * DEGREES, axis=UP), run_time=2)
+        self.move_camera(theta=115 * DEGREES, run_time=1.5)
+        self.move_camera(phi = 90*DEGREES, theta=90 * DEGREES, run_time=1.0)
+
+        # Add engineering-style arrows to show the length of the ship
+        length_arrow = DoubleArrow(
+            start=ship.get_left(),
+            end=ship.get_right(),
+            buff=0,
+            color=WHITE,
+            stroke_width=3,
+            tip_length=0.5  # Set tip_length to 0 to ensure exact alignment
+        )
+        length_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
+
+        # Add text to display the length of the ship
+        length_text = Text("150 m Length", font_size=40, color=WHITE)
+        length_text.next_to(length_arrow, OUT, buff=0.8)
+        length_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
+        length_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
+
+        # Animate the arrow and text fading in, waiting, and fading out
+        self.play(FadeIn(length_arrow), FadeIn(length_text))
+        self.wait(1)
+        self.move_camera(phi = 75*DEGREES, theta=90 * DEGREES, run_time=1.0)
+        self.wait(1)
+        self.play(FadeOut(length_arrow), FadeOut(length_text))
+
+        self.wait(2)
+
+        self.move_camera(theta=-0 * DEGREES, run_time=2)
+        # self.move_camera(phi = 90*DEGREES, run_time=2)
+        # self.move_camera(phi=80 * DEGREES, theta=75 * DEGREES, run_time=2)
+        # self.move_camera(phi=90 * DEGREES, theta=-75 * DEGREES, run_time=2)
 
         # Pitch
 
@@ -365,6 +357,7 @@ class Warship3D(ThreeDScene):
         # )
 
         self.wait(2)
+
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
