@@ -96,8 +96,14 @@ class UAV(VGroup):
     def __init__(self, fov_width: float, fov_deg: float, w_height_det_fov: bool = False, w_beam_det_fov: bool = False, **kwargs):
         super().__init__(**kwargs)
 
-        # Create the UAV as a triangle
-        self.uav = Triangle(color=YELLOW, fill_opacity=1).scale(0.2).move_to(2*DOWN + LEFT * (3/2)*fov_width)
+        # Create the UAV as a triangle with a sharper point at the front
+        self.uav = Polygon(
+            [-0.15, -0.1, 0],  # Bottom left
+            [0.15, -0.1, 0],   # Bottom right
+            [0, 0.3, 0],       # Top (sharper point)
+            color=YELLOW, fill_opacity=1
+        ).scale(0.9).move_to(2*DOWN + LEFT * (3/2)*fov_width)
+        
         self.add(self.uav)
 
         if w_height_det_fov:
@@ -118,7 +124,12 @@ class DesignTarget(VGroup):
         super().__init__(**kwargs)
 
         # Create the target as a triangle
-        self.triangle = Triangle(color=RED, fill_opacity=1).scale(0.2)
+        self.triangle = Polygon(
+            [-0.04, -0.04, 0],  # Bottom left
+            [-0.04, 0.04, 0],   # Bottom right
+            [0.05, 0, 0],       # Top (apex)
+            color=RED, fill_opacity=1
+        )
         self.add(self.triangle)
 
         if debug:
@@ -133,10 +144,28 @@ class a_LawnMower(BaseScene):
     def construct(self):
 
         # Add some targets to the scene
+        ## Target 1
         tgt1 = DesignTarget()
         tgt1.move_to(0.8*DOWN + 1.3*RIGHT)
-        tgt1.rotate(-PI/3)
+        tgt1_heading = 3/4*PI
+        tgt1.rotate(tgt1_heading)
         self.add(tgt1)
+        # Define the target's continuous movement animation in the direction it is pointing
+        tgt1_continuous_animation = always_redraw(
+            lambda: tgt1.shift(0.005 * np.array([math.cos(tgt1_heading), math.sin(tgt1_heading), 0]))
+        )
+        self.add(tgt1_continuous_animation)
+        ## Target 2
+        tgt2 = DesignTarget()
+        tgt2.move_to(1.3*DOWN + 0.7*LEFT)
+        tgt2_heading = PI + 3/7*PI
+        tgt2.rotate(tgt2_heading)
+        self.add(tgt2)
+        # Define the target's continuous movement animation in the direction it is pointing
+        tgt2_continuous_animation = always_redraw(
+            lambda: tgt2.shift(0.005 * np.array([math.cos(tgt2_heading), math.sin(tgt2_heading), 0]))
+        )
+        self.add(tgt2_continuous_animation)
 
         # Add UAV and FOV to the scene
         uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
@@ -150,38 +179,32 @@ class a_LawnMower(BaseScene):
         end_third_leg_turn_point   = 1  *RIGHT + 1*UP 
         end_fourth_leg             = 1.5*RIGHT + 3*DOWN + (uav_group.get_top() - uav_group.get_center())*UP
 
-        # Define the target's slow movement animation
-        tgt1_animation = tgt1.animate.shift(2 * RIGHT).set_run_time(10).set_rate_func(linear)
 
-        # Combine UAV animations and target animation
+        # Combine UAV animations
         self.play(
-            AnimationGroup(
-                Succession(
-                    ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
-                    Rotate(
-                        uav_group, 
-                        angle=-PI, 
-                        about_point=end_first_leg_turn_point,
-                        rate_func=linear
-                    ),
-                    ApplyMethod(uav_group.move_to, end_second_leg, rate_func=linear),
-                    Rotate(
-                        uav_group, 
-                        angle=PI, 
-                        about_point=end_second_leg_turn_point,
-                        rate_func=linear
-                    ),
-                    ApplyMethod(uav_group.move_to, end_third_leg, rate_func=linear),
-                    Rotate(
-                        uav_group, 
-                        angle=-PI, 
-                        about_point=end_third_leg_turn_point,
-                        rate_func=linear
-                    ),
-                    ApplyMethod(uav_group.move_to, end_fourth_leg, rate_func=linear),
+            Succession(
+                ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
+                Rotate(
+                    uav_group, 
+                    angle=-PI, 
+                    about_point=end_first_leg_turn_point,
+                    rate_func=linear
                 ),
-                tgt1_animation,
-                lag_ratio=0  # Ensure both animations run simultaneously
+                ApplyMethod(uav_group.move_to, end_second_leg, rate_func=linear),
+                Rotate(
+                    uav_group, 
+                    angle=PI, 
+                    about_point=end_second_leg_turn_point,
+                    rate_func=linear
+                ),
+                ApplyMethod(uav_group.move_to, end_third_leg, rate_func=linear),
+                Rotate(
+                    uav_group, 
+                    angle=-PI, 
+                    about_point=end_third_leg_turn_point,
+                    rate_func=linear
+                ),
+                ApplyMethod(uav_group.move_to, end_fourth_leg, rate_func=linear),
             )
         )
 
