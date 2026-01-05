@@ -276,7 +276,7 @@ class b_DesignTargetIntro(ThreeDScene):
             x_length=18,
             y_length=15,
             z_length=5
-        ).set_opacity(0.8)
+        ).set_opacity(1)
 
         axes.x_axis.set_color(BLUE)
         axes.y_axis.set_color(RED)
@@ -309,6 +309,7 @@ class b_DesignTargetIntro(ThreeDScene):
             color=WHITE
         ).shift(6*LEFT)
         height_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
+        height_arrow.shift(ship.get_top()*UP)
         # Add text to display the length of the ship
         height_text = Text("40 m Height", font_size=40, color=WHITE)
         height_text.next_to(height_arrow, LEFT, buff=0.6)
