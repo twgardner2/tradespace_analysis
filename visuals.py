@@ -129,7 +129,7 @@ class DesignTarget(VGroup):
 
 
 
-class LawnMower(BaseScene):
+class a_LawnMower(BaseScene):
     def construct(self):
 
         # Add some targets to the scene
