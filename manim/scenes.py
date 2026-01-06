@@ -310,12 +310,12 @@ class b_DesignTargetIntro(ThreeDScene):
             run_time = 2
         )
 
-        self.move_camera(
-            phi      = 90 * DEGREES,
-            theta    = 15 * DEGREES,
-            zoom     = 0.8,
-            run_time = 2.5
-        )
+        # self.move_camera(
+        #     phi      = 90 * DEGREES,
+        #     theta    = 15 * DEGREES,
+        #     zoom     = 0.8,
+        #     run_time = 2.5
+        # )
 
         self.move_camera(
             phi      = 60 * DEGREES,
@@ -324,7 +324,7 @@ class b_DesignTargetIntro(ThreeDScene):
             run_time = 1
         )
 
-        self.wait(10)
+        self.wait(1)
 
 
 
