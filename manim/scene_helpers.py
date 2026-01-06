@@ -71,6 +71,7 @@ class DesignTarget(VGroup):
 
 
 class Dimension3D(VGroup):
+
     def __init__(
         self,
         start,
@@ -142,3 +143,56 @@ class Dimension3D(VGroup):
 
         self.dim_line = dim_line
         self.ticks = ticks
+
+
+
+class MyWarship(VGroup):
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        HAZE_GREY = ManimColor.from_hex('#939393')
+        self.LENGTH_M       = 160
+        self.HEIGHT_M       = 40
+        self.BEAM_M         = 20
+        self.LENGTH         = 6
+        self.SCALING_FACTOR = self.LENGTH/self.LENGTH_M
+
+        self.HULL_DIM           = [self.SCALING_FACTOR * x for x in [self.LENGTH_M, self.BEAM_M, 0.3*self.HEIGHT_M]]
+        self.SUPERSTRUCTURE_DIM = [self.SCALING_FACTOR * x for x in [0.2*self.LENGTH_M, 0.75*self.BEAM_M, 0.2*self.HEIGHT_M]]
+
+        self.MAST_HEIGHT = self.SCALING_FACTOR * 0.5 * self.HEIGHT_M
+        self.MAST_RADIUS = self.SCALING_FACTOR * 0.2 * self.BEAM_M
+        # --- Hull ---
+        self.hull = Cube()
+        self.hull.scale(self.HULL_DIM)
+        self.hull.set_color(HAZE_GREY)
+        self.hull.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.hull.set_fill(opacity=1)  # Make opaque
+
+
+        # --- Superstructure ---
+        self.superstructure = Cube()
+        self.superstructure.scale(self.SUPERSTRUCTURE_DIM)
+        self.superstructure.set_color(GREY_B)
+        self.superstructure.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.superstructure.next_to(self.hull, OUT, buff=0).shift(0.15*self.HULL_DIM[0]*LEFT)
+
+        # --- Mast ---
+        self.mast = Cylinder(
+            radius    = self.MAST_RADIUS,
+            height    = self.MAST_HEIGHT,
+            direction = OUT
+        )
+        self.mast.set_color(HAZE_GREY)
+        self.mast.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.mast.set_fill(opacity=1)  # Make opaque
+        self.mast.next_to(self.superstructure, OUT, buff=0)
+
+        # Group ship
+        ship = VGroup(self.hull, self.superstructure, self.mast)
+        # ship.move_to(ORIGIN)
+
+        self.add(ship)
+
+
