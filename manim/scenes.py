@@ -286,24 +286,93 @@ class c_DetectionRanges(Scene):
 
     def construct(self):
 
-        ax = Axes()
-        # labels = ax.get_axis_labels(
-        #     Tex("x-axis").scale(0.7), Text("y-axis").scale(0.45)
-        # )
-        # self.add(ax, labels)
-        self.add(ax)
+        TGT_LENGTH = 160 #m
+        TGT_HEIGHT =  40 #m
+        RES = 480
+        JOHNSON = 8
+        FOV = 15
+
+        # ax = Axes(
+        #     x_range = (-10,10,1),
+        #     y_range = (-10,10,1),
+        # ).set_opacity(0.2)
+        # self.add(ax)
+
+        tgt_aob = ValueTracker(0)
+        tgt_aob_label = always_redraw(
+            lambda: Text(
+                f"Target AOB: {360/2/PI*tgt_aob.get_value():0.0f} deg",
+                font_size=28,
+                color=WHITE,
+            ).shift(3 * LEFT + 2 * UP)
+        )
+        self.add(tgt_aob_label)
+
+        # Simple top-down ship deck silhouette (facing RIGHT, pointed bow, flat stern)
+        tgt_pts = [
+            2.0 * RIGHT + 0.0 * UP,    # Bow tip
+            1.4 * RIGHT + 0.35 * UP,   # Upper bow shoulder
+            0.8 * RIGHT + 0.35 * UP,   # Upper mid
+            -1.6 * RIGHT + 0.35 * UP,  # Upper stern corner
+            -1.6 * RIGHT + 0.0 * UP,   # Stern center (flat)
+            -1.6 * RIGHT - 0.35 * UP,  # Lower stern corner
+            0.8 * RIGHT - 0.35 * UP,   # Lower mid
+            1.4 * RIGHT - 0.35 * UP,   # Lower bow shoulder
+        ]
+        tgt = Polygon(
+            *tgt_pts,
+            stroke_color=WHITE,
+            stroke_width=3,
+        ).set_fill(
+            color=GRAY, opacity=0.35
+        ).scale(0.3)
+
+        tgt.shift(3 * UP)
+        self.add(tgt)
         
-        uav = UAV(fov_width=1, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+
+        def tgt_x():
+            current_tgt_aob = tgt_aob.get_value()
+            return TGT_LENGTH*math.cos(current_tgt_aob)
+
+        def det_rng():
+            current_tgt_aob = tgt_aob.get_value()
+            tgt_x =  max(TGT_HEIGHT, TGT_LENGTH*math.cos(current_tgt_aob))
+            return (tgt_x*RES)/(JOHNSON*FOV)
+
+        det_rng_label = DecimalNumber(
+            det_rng(),
+            num_decimal_places=1,
+            include_sign=False,
+            color=ORANGE
+        )
+        det_rng_label.shift(3*LEFT)
+        def update_det_rng_label(m):
+            m.set_value(det_rng())
+        det_rng_label.add_updater(update_det_rng_label)
+        self.add(det_rng_label)
+
+        uav = UAV(fov_width=1, fov_deg=25, w_height_det_fov=False, w_beam_det_fov=False)
+        uav.shift(3 * DOWN)
         self.add(uav)
 
 
-        tgt = DesignTarget()
-        tgt.shift(2*UP)
+        # Make target continuously match the current tgt_aob
+        tgt_aob_ref = ValueTracker(0)
+
+        def update_tgt_rotation(m):
+            # Rotate by the delta since last frame (avoids compounding / set_angle issues)
+            new_aob = tgt_aob.get_value()
+            delta = new_aob - tgt_aob_ref.get_value()
+            m.rotate(delta)
+            tgt_aob_ref.set_value(new_aob)
+
+        tgt.add_updater(update_tgt_rotation)
         self.add(tgt)
 
-
-        self.wait(5)
-
+        self.play(tgt_aob.animate.set_value(2 * PI), run_time=6)
+        self.play(tgt_aob.animate.set_value(0))
+        self.wait(10)
 
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
