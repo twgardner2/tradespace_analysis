@@ -1,4 +1,5 @@
 from manim import *
+import math
 import numpy as np
 
 class FOV(VGroup):
@@ -6,7 +7,7 @@ class FOV(VGroup):
         super().__init__(*kwargs)
 
         # Calculate downtrack distance for angle and crosstrack distance
-        angle_rad = angle_deg * 2*math.pi/360
+        angle_rad = angle_deg * PI/360
         downtrack = (cross/2) / math.tan(angle_rad/2)
 
         # Create/add polygon

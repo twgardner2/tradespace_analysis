@@ -1,3 +1,5 @@
+# Generate videos from scenes:
+# manim ./manim/scenes.py --config_file ./manim/manim.cfg
 
 # Convert medium quality .mp4 to .gif
 # ffmpeg -i SceneName.mp4 -vf "fps=30,scale=720:-1:flags=lanczos,palettegen" palette.png
@@ -206,6 +208,7 @@ class b_DesignTargetIntro(ThreeDScene):
 
         self.renderer.camera.frame_rate = 6
 
+        # Axes
         axes = ThreeDAxes(
             x_range=(-5, 5, 1),
             y_range=(-5, 5, 1),
@@ -217,49 +220,108 @@ class b_DesignTargetIntro(ThreeDScene):
         axes.x_axis.set_color(BLUE)
         axes.y_axis.set_color(RED)
         axes.z_axis.set_color(GREEN)
+        axes.set_opacity(0.3)
 
+        # Ship
         ship = MyWarship()
         for part in ship:
             part.set_shade_in_3d(False)
 
+        # Dimension indicators
         length_dim = Dimension3D(
             start=ship.hull.get_critical_point(-X_AXIS),
             end=ship.hull.get_critical_point(X_AXIS),
             tick_direction=OUT,
-            # offset=1.5 * OUT,
-            offset=0,
-            # label="160 m Length"
+            offset=2.0 * OUT,
         )
-        # length_dim_label
+        length_dim_label = Text(f'{ship.LENGTH_M} m', font_size=36, color=WHITE)
+        length_dim_label.move_to(2.5 * OUT + 1.5*RIGHT)
+        self.add_fixed_orientation_mobjects(length_dim_label)
+        self.remove(length_dim_label)
 
         height_dim = Dimension3D(
             start=ship.hull.get_critical_point(-Z_AXIS),
             end=ship.hull.get_critical_point(Z_AXIS) + ship.SUPERSTRUCTURE_DIM[2]*OUT + ship.MAST_HEIGHT*OUT,
             tick_direction=LEFT,
-            offset=7 *RIGHT,
-            # offset=0,
-            # label="40 m Height"
+            offset=6.4 *RIGHT,
         )
+        height_dim_label = Text(f'{ship.HEIGHT_M:0.0f} m', font_size=36, color=WHITE)
+        height_dim_label.move_to(7.4 * RIGHT + (ship.SUPERSTRUCTURE_DIM[2] + ship.MAST_HEIGHT)/2*OUT)
+        self.add_fixed_orientation_mobjects(height_dim_label)
+        self.remove(height_dim_label)
+
+        width_dim = Dimension3D(
+            start=ship.hull.get_critical_point(-Y_AXIS),
+            end=ship.hull.get_critical_point(Y_AXIS),
+            tick_direction = LEFT,
+            offset= 6.4 * LEFT + ship.HULL_DIM[2]/2*OUT,
+        )
+        width_dim_label = Text(f'{ship.BEAM_M:0.0f} m', font_size=36, color=WHITE)
+        width_dim_label.move_to(7.4 * LEFT + ship.HULL_DIM[2]/2*OUT)
+        self.add_fixed_orientation_mobjects(width_dim_label)
+        self.remove(width_dim_label)
 
         self.add(axes, ship)
 
+        # Camera positioning
         self.set_camera_orientation(
-            phi=90 * DEGREES,
-            theta=0 * DEGREES,
-            zoom=0.6
+            phi   = 60 * DEGREES,
+            theta = 30 * DEGREES,
+            zoom  = 0.3
         )
 
         self.play(
             FadeIn(length_dim),
+            FadeIn(length_dim_label),
             FadeIn(height_dim),
+            FadeIn(height_dim_label),
+            FadeIn(width_dim),
+            FadeIn(width_dim_label),
             run_time=1
         )
 
+        # Zoom in and pan length
         self.move_camera(
-            phi=80 * DEGREES,
-            theta=115 * DEGREES,
-            zoom=0.8,
-            run_time=2
+            phi      = 80 * DEGREES,
+            theta    = 115 * DEGREES,
+            zoom     = 0.8,
+            run_time = 2
+        )
+        self.move_camera(
+            phi      = 90 * DEGREES,
+            theta    = 75 * DEGREES,
+            zoom     = 0.8,
+            run_time = 2.5
+        )
+
+        # Swing over top
+        self.move_camera(
+            phi      = 10 * DEGREES,
+            theta    = 90 * DEGREES,
+            zoom     = 0.8,
+            run_time = 1.5
+        )
+
+        # Show beam
+        self.move_camera(
+            phi      = 80 * DEGREES,
+            theta    = -15 * DEGREES,
+            zoom     = 0.8,
+            run_time = 2
+        )
+
+        self.move_camera(
+            phi      = 90 * DEGREES,
+            theta    = 15 * DEGREES,
+            zoom     = 0.8,
+            run_time = 2.5
+        )
+
+        self.move_camera(
+            phi      = 60 * DEGREES,
+            theta    = 30 * DEGREES,
+            zoom     = 0.3,
+            run_time = 1
         )
 
         self.wait(10)
