@@ -8,6 +8,12 @@
 from manim import *
 import math
 import numpy as np
+from scene_helpers import (
+    Dimension3D,
+    FOV,
+    UAV,
+    DesignTarget
+)
 
 TEXT_WRITE_TIME = 1 # seconds
 
@@ -71,71 +77,6 @@ class BaseScene(Scene):
         )
         # Add lanes and flight paths to the scene
         self.add(lane_boundaries, flight_paths)
-
-
-class FOV(VGroup):
-    def __init__(self, origin, cross, angle_deg, **kwargs):
-        super().__init__(*kwargs)
-
-        # Calculate downtrack distance for angle and crosstrack distance
-        angle_rad = angle_deg * 2*math.pi/360
-        downtrack = (cross/2) / math.tan(angle_rad/2)
-
-        # Create/add polygon
-        self.fov = VGroup(
-            Polygon(
-                origin, origin + downtrack*UP + cross/2*LEFT, origin + downtrack*UP + cross/2*RIGHT,
-                stroke_color=YELLOW
-            ).set_fill(YELLOW, opacity=0.15)
-        )
-        self.add(self.fov)
-
-
-class UAV(VGroup):
-
-    def __init__(self, fov_width: float, fov_deg: float, w_height_det_fov: bool = False, w_beam_det_fov: bool = False, **kwargs):
-        super().__init__(**kwargs)
-
-        # Create the UAV as a triangle with a sharper point at the front
-        self.uav = Polygon(
-            [-0.15, -0.1, 0],  # Bottom left
-            [0.15, -0.1, 0],   # Bottom right
-            [0, 0.3, 0],       # Top (sharper point)
-            color=YELLOW, fill_opacity=1
-        ).scale(0.9).move_to(2*DOWN + LEFT * (3/2)*fov_width)
-
-        self.add(self.uav)
-
-        if w_height_det_fov:
-            # Create sensor FOV vs. design target's height dimension (shorter detection range)
-            self.fov_height = FOV(origin=self.uav.get_top(), cross=fov_width, angle_deg=fov_deg)
-            # Group UAV and FOV
-            self.add(self.fov_height)
-
-        # Optionally create sensor FOV vs. design target's length dimension (longer detection range)
-        if w_beam_det_fov:
-            self.fov_beaming = FOV(origin=self.uav.get_top(), cross=1.5*fov_width, angle_deg=fov_deg)
-            self.add(self.fov_beaming)
-
-
-class DesignTarget(VGroup):
-
-    def __init__(self, debug=False, **kwargs):
-        super().__init__(**kwargs)
-
-        # Create the target as a triangle
-        self.triangle = Polygon(
-            [-0.04, -0.04, 0],  # Bottom left
-            [-0.04, 0.04, 0],   # Bottom right
-            [0.05, 0, 0],       # Top (apex)
-            color=RED, fill_opacity=1
-        )
-        self.add(self.triangle)
-
-        if debug:
-            self.bow_dot = Dot(self.triangle.get_top(), color=BLUE)
-            self.bow_dot.align_to(self.triangle, UP)
-            self.add(self.bow_dot)
 
 
 class a_LawnMower(BaseScene):
@@ -208,6 +149,8 @@ class a_LawnMower(BaseScene):
 
         self.wait()
 
+
+
 class MyWarship(VGroup):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -225,36 +168,37 @@ class MyWarship(VGroup):
         self.MAST_HEIGHT = self.SCALING_FACTOR * 0.5 * self.HEIGHT_M
         self.MAST_RADIUS = self.SCALING_FACTOR * 0.2 * self.BEAM_M
         # --- Hull ---
-        hull = Cube()
-        hull.scale(self.HULL_DIM)
-        hull.set_color(HAZE_GREY)
-        hull.set_stroke(color=BLACK, width=1)  # Add black outline
-        hull.set_fill(opacity=1)  # Make opaque
+        self.hull = Cube()
+        self.hull.scale(self.HULL_DIM)
+        self.hull.set_color(HAZE_GREY)
+        self.hull.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.hull.set_fill(opacity=1)  # Make opaque
 
 
         # --- Superstructure ---
-        superstructure = Cube()
-        superstructure.scale(self.SUPERSTRUCTURE_DIM)
-        superstructure.set_color(GREY_B)
-        superstructure.set_stroke(color=BLACK, width=1)  # Add black outline
-        superstructure.next_to(hull, OUT, buff=0).shift(0.15*self.HULL_DIM[0]*LEFT)
+        self.superstructure = Cube()
+        self.superstructure.scale(self.SUPERSTRUCTURE_DIM)
+        self.superstructure.set_color(GREY_B)
+        self.superstructure.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.superstructure.next_to(self.hull, OUT, buff=0).shift(0.15*self.HULL_DIM[0]*LEFT)
 
         # --- Mast ---
-        mast = Cylinder(
+        self.mast = Cylinder(
             radius    = self.MAST_RADIUS,
             height    = self.MAST_HEIGHT,
             direction = OUT
         )
-        mast.set_color(HAZE_GREY)
-        mast.set_stroke(color=BLACK, width=1)  # Add black outline
-        mast.set_fill(opacity=1)  # Make opaque
-        mast.next_to(superstructure, OUT, buff=0)
+        self.mast.set_color(HAZE_GREY)
+        self.mast.set_stroke(color=BLACK, width=1)  # Add black outline
+        self.mast.set_fill(opacity=1)  # Make opaque
+        self.mast.next_to(self.superstructure, OUT, buff=0)
 
         # Group ship
-        ship = VGroup(hull, superstructure, mast)
+        ship = VGroup(self.hull, self.superstructure, self.mast)
         # ship.move_to(ORIGIN)
 
         self.add(ship)
+
 
 
 class b_DesignTargetIntro(ThreeDScene):
@@ -262,8 +206,6 @@ class b_DesignTargetIntro(ThreeDScene):
 
         self.renderer.camera.frame_rate = 6
 
-        # region: Setup objects ================================================
-        ## Axes ----------------------------------------------------------------
         axes = ThreeDAxes(
             x_range=(-5, 5, 1),
             y_range=(-5, 5, 1),
@@ -271,136 +213,58 @@ class b_DesignTargetIntro(ThreeDScene):
             x_length=18,
             y_length=15,
             z_length=5
-        ).set_opacity(1)
-
+        )
         axes.x_axis.set_color(BLUE)
         axes.y_axis.set_color(RED)
         axes.z_axis.set_color(GREEN)
-        
-        ## Ship ----------------------------------------------------------------
+
         ship = MyWarship()
-        # Disable lighting (faster, clearer)
         for part in ship:
             part.set_shade_in_3d(False)
-        
-        # Length dimension arrow and label  ------------------------------------
-        length_arrow = BraceBetweenPoints(
-            ship.get_left(),
-            ship.get_right(),
-            direction=UP,
-            color=WHITE
-        ).shift(1.3*OUT)
-        length_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
-        # Add text to display the length of the ship
-        length_text = Text("150 m Length", font_size=40, color=WHITE)
-        length_text.next_to(length_arrow, OUT, buff=0.6)
-        length_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
-        length_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
-        
-        height_arrow = BraceBetweenPoints(
-            ship.get_top(),
-            ship.get_bottom(),
-            direction=LEFT,
-            color=WHITE
-        ).shift(6*LEFT)
-        height_arrow.rotate(PI / 2, axis=RIGHT)  # Rotate the arrow about the x-axis
-        height_arrow.shift(ship.get_top()*UP)
-        # Add text to display the length of the ship
-        height_text = Text("40 m Height", font_size=40, color=WHITE)
-        height_text.next_to(height_arrow, LEFT, buff=0.6)
-        height_text.rotate(PI / 2, axis=RIGHT)  # Rotate the text about the x-axis
-        height_text.rotate(PI, axis=OUT)  # Rotate the text about the x-axis
 
-
-        ## Add initial objects -------------------------------------------------
-        self.add(axes)
-        self.add(ship)
-        #-endregion-------------------------------------------------------------
-
-        # Camera
-        self.set_camera_orientation(
-            phi=75 * DEGREES,
-            theta=20 * DEGREES,
-            zoom=0.2
+        length_dim = Dimension3D(
+            start=ship.hull.get_critical_point(-X_AXIS),
+            end=ship.hull.get_critical_point(X_AXIS),
+            tick_direction=OUT,
+            # offset=1.5 * OUT,
+            offset=0,
+            # label="160 m Length"
         )
-        self.wait(1)
+        # length_dim_label
 
-        # Animate the arrow and text fading in while moving the camera simultaneously
+        height_dim = Dimension3D(
+            start=ship.hull.get_critical_point(-Z_AXIS),
+            end=ship.hull.get_critical_point(Z_AXIS) + ship.SUPERSTRUCTURE_DIM[2]*OUT + ship.MAST_HEIGHT*OUT,
+            tick_direction=LEFT,
+            offset=7 *RIGHT,
+            # offset=0,
+            # label="40 m Height"
+        )
+
+        self.add(axes, ship)
+
+        self.set_camera_orientation(
+            phi=90 * DEGREES,
+            theta=0 * DEGREES,
+            zoom=0.6
+        )
+
         self.play(
-            FadeIn(length_arrow),
-            FadeIn(length_text),
-            FadeIn(height_arrow),
-            FadeIn(height_text),
+            FadeIn(length_dim),
+            FadeIn(height_dim),
             run_time=1
         )
 
         self.move_camera(
             phi=80 * DEGREES,
             theta=115 * DEGREES,
-            zoom=0.9,
+            zoom=0.8,
             run_time=2
         )
 
-        self.move_camera(
-            phi = 90*DEGREES,
-            theta = 65*DEGREES,
-            run_time=2.5
-        )
-
-        self.play(
-            FadeOut(length_arrow),
-            FadeOut(length_text),
-            FadeOut(height_arrow),
-            FadeOut(height_text),
-            run_time=2
-        )
-        # self.wait(1)
-
-        self.move_camera(
-            phi = 85*DEGREES,
-            theta = -15*DEGREES,
-            run_time=1
-        )
-        # self.play(FadeOut(length_arrow), FadeOut(length_text))
-
-        # --- Rotations ---
-
-        # self.move_camera(theta=115 * DEGREES, run_time=1)
-        # self.move_camera(theta=65 * DEGREES, run_time=1)
-        # self.move_camera(theta=90 * DEGREES, run_time=1)
-        # self.move_camera(phi=90 * DEGREES, run_time=1)
-        # self.move_camera(phi=60 * DEGREES, run_time=1)
-        # self.move_camera(phi=75 * DEGREES, run_time=1)
-        # self.move_camera(phi = 90*DEGREES, theta=90 * DEGREES, run_time=1.0)
+        self.wait(10)
 
 
-
-
-
-
-        self.wait(2)
-
-        # self.move_camera(theta=-0 * DEGREES, run_time=2)
-        # self.move_camera(phi = 90*DEGREES, run_time=2)
-        # self.move_camera(phi=80 * DEGREES, theta=75 * DEGREES, run_time=2)
-        # self.move_camera(phi=90 * DEGREES, theta=-75 * DEGREES, run_time=2)
-
-        # Pitch
-
-        # # Roll
-        # self.play(Rotate(ship, angle=90 * DEGREES, axis=OUT), run_time=2)
-        # self.play(Rotate(ship, angle=-90 * DEGREES, axis=OUT), run_time=2)
-
-        # Combined rigid-body rotation
-        # self.play(
-        #     ship.animate
-        #         .rotate(30 * DEGREES, axis=UP)
-        #         .rotate(-10 * DEGREES, axis=RIGHT)
-        #         .rotate(10 * DEGREES, axis=OUT),
-        #     run_time=3
-        # )
-
-        self.wait(2)
 
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
@@ -640,4 +504,43 @@ class ShortLateralOffsetTurn(BaseScene):
         self.play(r.animate.set_value(2.0))
         self.play(r.animate.set_value(1.0))
         # End the animation
+        self.wait(10)
+
+
+
+class LimitingBeamCase(BaseScene):
+
+    def construct(self):
+
+        # Add UAV and it's FOV
+        uav_group = UAV(fov_width=self.lane_width, fov_deg=35, w_beam_det_fov=True)
+        self.add(uav_group)
+
+        # uav_group.next_to(self.search_area, DOWN, aligned_edge=LEFT, buff=0)
+        uav_group.next_to(self.search_area, DOWN, buff=0)
+        uav_group.shift(self.lane_width * self.N_LANES/2 * LEFT + self.lane_width*0.5*RIGHT)
+
+        # Instantiate target
+        tgt = DesignTarget(debug=True)
+        tgt.rotate(math.pi/2)
+        # tgt.move_to(uav_group.get_edge_center(UP)).shift(uav_group.width/2*RIGHT, aligned_edge=LEFT)
+        tgt.move_to(uav_group.get_corner(UR), aligned_edge=LEFT)
+        self.add(tgt)
+
+
+        # End the animation
+        self.wait(20)
+
+
+
+    def construct(self):
+        ship = SVGMobject('./www/frigate.svg')
+        ship.scale(2)
+        # ship.set_color(GRAY)
+
+        self.play(Create(ship))
+        ship.center()
+        stern = ship.get_left()
+        # self.play(ship.animate.rotate(PI), about_point=stern)
+        self.play(ship.animate.rotate(PI), axis=UP)
         self.wait(10)
