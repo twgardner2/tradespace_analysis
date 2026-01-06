@@ -111,6 +111,7 @@ class a_LawnMower(BaseScene):
 
         # Add UAV and FOV to the scene
         uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+        uav_group.scale(0.9).move_to(2*DOWN + LEFT * (3/2)*uav_group.fov_width)
         self.add(uav_group)
 
         end_first_leg              = 1.5*LEFT  + 1*UP + (uav_group.get_top() - uav_group.get_center())*DOWN
@@ -280,12 +281,37 @@ class b_DesignTargetIntro(ThreeDScene):
 
 
 
+
+class c_DetectionRanges(Scene):
+
+    def construct(self):
+
+        ax = Axes()
+        # labels = ax.get_axis_labels(
+        #     Tex("x-axis").scale(0.7), Text("y-axis").scale(0.45)
+        # )
+        # self.add(ax, labels)
+        self.add(ax)
+        
+        uav = UAV(fov_width=1, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+        self.add(uav)
+
+
+        tgt = DesignTarget()
+        tgt.shift(2*UP)
+        self.add(tgt)
+
+
+        self.wait(5)
+
+
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
 
 
         # Add UAV and FOV to the scene
         uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = True, w_beam_det_fov=False)
+        uav_group.scale(0.9).move_to(2*DOWN + LEFT * (3/2)*uav_group.fov_width)
         self.add(uav_group)
 
         dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
@@ -347,6 +373,7 @@ class ShortLateralOffsetTurn(BaseScene):
 
         # Add UAV and it's FOV
         uav_group = UAV(fov_width=self.lane_width, fov_deg=35)
+        uav_group.scale(0.9).move_to(1*UP + (uav_group.uav.get_top()-uav_group.uav.get_center())*DOWN + LEFT * (3/2)*uav_group.fov_width)
         self.add(uav_group)
 
         # Calculations for S < 2R turn

@@ -26,13 +26,15 @@ class UAV(VGroup):
     def __init__(self, fov_width: float, fov_deg: float, w_height_det_fov: bool = False, w_beam_det_fov: bool = False, **kwargs):
         super().__init__(**kwargs)
 
+        self.fov_width = fov_width
+
         # Create the UAV as a triangle with a sharper point at the front
         self.uav = Polygon(
             [-0.15, -0.1, 0],  # Bottom left
             [0.15, -0.1, 0],   # Bottom right
             [0, 0.3, 0],       # Top (sharper point)
             color=YELLOW, fill_opacity=1
-        ).scale(0.9).move_to(2*DOWN + LEFT * (3/2)*fov_width)
+        )
 
         self.add(self.uav)
 
@@ -147,7 +149,7 @@ class Dimension3D(VGroup):
 
 
 class MyWarship(VGroup):
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
