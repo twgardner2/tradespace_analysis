@@ -290,13 +290,10 @@ class c_DetectionRanges(Scene):
         TGT_HEIGHT =  40 #m
         RES = 480
         JOHNSON = 8
-        FOV = 15
+        FOV = 60 * 2 * PI /360
 
-        # ax = Axes(
-        #     x_range = (-10,10,1),
-        #     y_range = (-10,10,1),
-        # ).set_opacity(0.2)
-        # self.add(ax)
+        MAX_DET_RNG = (160*RES)/(JOHNSON*FOV)
+        SCALE_FACTOR = 6/MAX_DET_RNG
 
         tgt_aob = ValueTracker(0)
         tgt_aob_label = always_redraw(
@@ -304,20 +301,22 @@ class c_DetectionRanges(Scene):
                 f"Target AOB: {360/2/PI*tgt_aob.get_value():0.0f} deg",
                 font_size=28,
                 color=WHITE,
-            ).shift(3 * LEFT + 2 * UP)
+            ).shift(4 * LEFT + 2 * UP)
         )
         self.add(tgt_aob_label)
 
         # Simple top-down ship deck silhouette (facing RIGHT, pointed bow, flat stern)
         tgt_pts = [
-            2.0 * RIGHT + 0.0 * UP,    # Bow tip
-            1.4 * RIGHT + 0.35 * UP,   # Upper bow shoulder
-            0.8 * RIGHT + 0.35 * UP,   # Upper mid
-            -1.6 * RIGHT + 0.35 * UP,  # Upper stern corner
-            -1.6 * RIGHT + 0.0 * UP,   # Stern center (flat)
-            -1.6 * RIGHT - 0.35 * UP,  # Lower stern corner
-            0.8 * RIGHT - 0.35 * UP,   # Lower mid
-            1.4 * RIGHT - 0.35 * UP,   # Lower bow shoulder
+            # Center ship on y-axis: midpoint between bow tip (max x) and stern (min x) at x=0.
+            # Bow tip x =  2.0, stern x = -1.6  -> midpoint = (2.0 + (-1.6)) / 2 = 0.2
+            (2.0 - 0.2) * RIGHT + 0.0 * UP,    # Bow tip
+            (1.4 - 0.2) * RIGHT + 0.35 * UP,   # Upper bow shoulder
+            (0.8 - 0.2) * RIGHT + 0.35 * UP,   # Upper mid
+            (-1.6 - 0.2) * RIGHT + 0.35 * UP,  # Upper stern corner
+            (-1.6 - 0.2) * RIGHT + 0.0 * UP,   # Stern center (flat)
+            (-1.6 - 0.2) * RIGHT - 0.35 * UP,  # Lower stern corner
+            (0.8 - 0.2) * RIGHT - 0.35 * UP,   # Lower mid
+            (1.4 - 0.2) * RIGHT - 0.35 * UP,   # Lower bow shoulder
         ]
         tgt = Polygon(
             *tgt_pts,
@@ -325,26 +324,30 @@ class c_DetectionRanges(Scene):
             stroke_width=3,
         ).set_fill(
             color=GRAY, opacity=0.35
-        ).scale(0.3)
-
-        tgt.shift(3 * UP)
+        ).scale(0.3).shift(3 * UP)
         self.add(tgt)
         
-
-        def tgt_x():
-            current_tgt_aob = tgt_aob.get_value()
-            return TGT_LENGTH*math.cos(current_tgt_aob)
-
         def det_rng():
             current_tgt_aob = tgt_aob.get_value()
-            tgt_x =  max(TGT_HEIGHT, TGT_LENGTH*math.cos(current_tgt_aob))
+            tgt_x =  max(TGT_HEIGHT, abs(TGT_LENGTH*math.cos(current_tgt_aob)))
             return (tgt_x*RES)/(JOHNSON*FOV)
+        
+        def downtrack_dist():
+            # return det_rng() * math.cos(FOV/2) * SCALE_FACTOR
+            return det_rng() * SCALE_FACTOR
+        
+        def cross_dist():
+            return det_rng() * math.tan(FOV/2) * SCALE_FACTOR
 
-        det_rng_label = DecimalNumber(
-            det_rng(),
-            num_decimal_places=1,
-            include_sign=False,
-            color=ORANGE
+
+
+        # Labels ----------
+        det_rng_label = always_redraw(
+            lambda: Text(
+                f"Detection Range: {det_rng():0.0f} m",
+                font_size=28,
+                color=WHITE,
+            ).shift(4 * LEFT + 1 * UP)
         )
         det_rng_label.shift(3*LEFT)
         def update_det_rng_label(m):
@@ -356,6 +359,31 @@ class c_DetectionRanges(Scene):
         uav.shift(3 * DOWN)
         self.add(uav)
 
+        dy = (uav.get_critical_point(Y_AXIS) - uav.get_center()) * SCALE_FACTOR * UP
+
+        fov_cone = Polygon(
+                uav.get_critical_point(Y_AXIS) + dy, 
+                uav.get_critical_point(Y_AXIS) + dy + downtrack_dist()*UP + cross_dist()/2*LEFT, 
+                uav.get_critical_point(Y_AXIS) + dy + downtrack_dist()*UP + cross_dist()/2*RIGHT,
+                stroke_color=YELLOW
+            ).set_fill(YELLOW, opacity=0.15)
+
+        # Keep the cone attached to the UAV nose and update as the UAV moves/rotates.
+        fov_cone.add_updater(
+            lambda m: m.become(
+                Polygon(
+                    uav.get_critical_point(Y_AXIS) + dy,
+                    uav.get_critical_point(Y_AXIS) + dy
+                    + downtrack_dist() * UP
+                    + (cross_dist() / 2) * LEFT,
+                    uav.get_critical_point(Y_AXIS) + dy
+                    + downtrack_dist() * UP
+                    + (cross_dist() / 2) * RIGHT,
+                    stroke_color=YELLOW,
+                ).set_fill(YELLOW, opacity=0.15)
+            )
+        )
+        self.add(fov_cone)
 
         # Make target continuously match the current tgt_aob
         tgt_aob_ref = ValueTracker(0)
@@ -370,8 +398,21 @@ class c_DetectionRanges(Scene):
         tgt.add_updater(update_tgt_rotation)
         self.add(tgt)
 
-        self.play(tgt_aob.animate.set_value(2 * PI), run_time=6)
-        self.play(tgt_aob.animate.set_value(0))
+        # Updater: shift the UAV vertically based on detection range
+        # Starts at the lowest position (3*DOWN). As det_rng decreases, move up by SCALE_FACTOR * det_rng.
+        base_uav_pos = uav.get_center()
+
+        def update_uav_pos(m):
+            y_offset = SCALE_FACTOR * (MAX_DET_RNG-det_rng())
+            m.move_to(base_uav_pos + y_offset * UP)
+
+        uav.add_updater(update_uav_pos)
+
+        # self.play(tgt_aob.animate.set_value(PI/2), run_time=3)
+        # self.play(tgt_aob.animate.set_value(2*PI), run_time=8)
+        self.play(tgt_aob.animate.set_value(PI), run_time=8)
+        # self.play(tgt_aob.animate.set_value(2*PI), run_time=3)
+        # self.play(tgt_aob.animate.set_value(0))
         self.wait(10)
 
 class SensorGapWhenTurning(BaseScene):

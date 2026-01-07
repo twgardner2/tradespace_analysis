@@ -13,7 +13,9 @@ class FOV(VGroup):
         # Create/add polygon
         self.fov = VGroup(
             Polygon(
-                origin, origin + downtrack*UP + cross/2*LEFT, origin + downtrack*UP + cross/2*RIGHT,
+                origin, 
+                origin + downtrack*UP + cross/2*LEFT, 
+                origin + downtrack*UP + cross/2*RIGHT,
                 stroke_color=YELLOW
             ).set_fill(YELLOW, opacity=0.15)
         )
