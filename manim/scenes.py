@@ -316,16 +316,38 @@ class c_DetectionRangesWGraph(Scene):
         tgt_aob_ref = ValueTracker(0)
 
         # --- 3) Top Labels (Fixed Position) ---
-        # We use a single VGroup or fixed-position Text items to prevent jumping
-        header_labels = always_redraw(
+        label_fs = 18
+        value_fs = 22
+        col_w = 3.5  # Width of each column "container"
+
+        def create_cell(content_str, is_label=True):
+            # Create the text with a consistent font size
+            txt = Text(content_str, font_size=label_fs if is_label else value_fs)
+            
+            # Create an invisible box to define the column width
+            # This ensures the 'center' or 'edge' of the cell remains fixed
+            frame = Rectangle(width=col_w, height=0.5, stroke_opacity=0, fill_opacity=0)
+            
+            # Align text to the left side of the invisible frame
+            txt.move_to(frame.get_left(), aligned_edge=LEFT)
+            
+            return VGroup(frame, txt)
+
+        header_labels = VGroup(
+            create_cell("AOB", is_label=True),
+            create_cell("Tgt Length Cross", is_label=True),
+            create_cell("Tgt Height", is_label=True),
+        ).arrange(RIGHT, buff=0.2).to_edge(UP, buff=0.2).shift(LEFT * 0.5)
+
+        header_values = always_redraw(
             lambda: VGroup(
-                Text(f"AOB: {world_angle_to_bow_label(tgt_aob.get_value())}", font_size=20),
-                Text(f"Tgt Length Crosstrack: {abs(TGT_LENGTH * math.cos(tgt_aob.get_value())):.0f} m", font_size=20),
-                Text(f"Tgt Height: {TGT_HEIGHT} m", font_size=20),
-                Text(f"Range: {get_det_rng(tgt_aob.get_value()):.0f} m", font_size=20)
-            ).arrange(RIGHT, buff=0.5).to_edge(UP, buff=0.3)
+                create_cell(world_angle_to_bow_label(tgt_aob.get_value()), is_label=False),
+                create_cell(f"{abs(TGT_LENGTH * math.cos(tgt_aob.get_value())):.0f} m", is_label=False),
+                create_cell(f"{TGT_HEIGHT} m", is_label=False),
+            ).arrange(RIGHT, buff=0.2).next_to(header_labels, DOWN, buff=0.1, aligned_edge=LEFT)
         )
-        self.add(header_labels)
+
+        self.add(header_labels, header_values)
 
         # --- Plot (Right Side) ---
         axes = Axes(
@@ -359,7 +381,9 @@ class c_DetectionRangesWGraph(Scene):
         
         def update_uav(m):
             current_rng_screen = get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR
+            # TGT_POS[0] is X, TGT_POS[1] is Y
             m.move_to([TGT_POS[0], TGT_POS[1] - current_rng_screen, 0])
+
 
         uav.add_updater(update_uav)
         
