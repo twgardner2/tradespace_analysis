@@ -295,16 +295,88 @@ class c_DetectionRanges(Scene):
         MAX_DET_RNG = (160*RES)/(JOHNSON*FOV)
         SCALE_FACTOR = 6/MAX_DET_RNG
 
+        def world_to_bow_angle_deg(world_deg):
+            """
+            World: 0° = +X, CCW positive
+            Bow:   0° = forward (world 270°), CW positive
+            """
+            return (world_deg - 270) % 360
+        
+        def bow_angle_to_label(bow_deg):
+            """
+            Convert bow-relative angle (0–360)
+            to 'Port X', 'Starboard X', '0', or '180'
+            """
+
+            bow_deg = bow_deg % 360
+
+            # Straight ahead / astern
+            if bow_deg == 0:
+                return "0"
+            if bow_deg == 180:
+                return "180"
+
+            # Starboard side (0 < angle < 180)
+            if bow_deg < 180:
+                return f"Starboard {int(round(bow_deg))}"
+
+            # Port side (180 < angle < 360)
+            return f"Port {int(round(360 - bow_deg))}"
+
+        def world_angle_to_bow_label(world_angle):
+            # ValueTracker is animated in radians; convert to world-degrees for labeling.
+            world_deg = (world_angle * 180 / PI) % 360
+            bow_deg = world_to_bow_angle_deg(world_deg)
+            return bow_angle_to_label(bow_deg)
+
+        def tgt_length_cross_track():
+            current_tgt_aob = tgt_aob.get_value()
+            tgt_x =  abs(TGT_LENGTH*math.cos(current_tgt_aob))
+            return tgt_x
+
         tgt_aob = ValueTracker(0)
         tgt_aob_label = always_redraw(
-            lambda: Text(
-                f"Target AOB: {360/2/PI*tgt_aob.get_value():0.0f} deg",
+            lambda: VGroup(
+            Text(
+                "AOB:",
                 font_size=28,
                 color=WHITE,
-            ).shift(4 * LEFT + 2 * UP)
+            ),
+            Text(
+                world_angle_to_bow_label(tgt_aob.get_value()),
+                font_size=28,
+                color=WHITE,
+            ),
+            Text(
+                "Length Cross-Track:",
+                font_size=28,
+                color=WHITE,
+            ),
+            Text(
+                f'{tgt_length_cross_track():0.0f} m',
+                font_size=28,
+                color=WHITE,
+            ),
+            Text(
+                "Height:",
+                font_size=28,
+                color=WHITE,
+            ),
+            Text(
+                '40 m',
+                font_size=28,
+                color=WHITE,
+            ),
+            )
+            # Left-align the two lines with each other so the second line doesn't
+            # re-center as its text length changes.
+            .arrange(DOWN, aligned_edge=LEFT, buff=0.15)
+            # Anchor the whole label block to a fixed point on screen.
+            .move_to(6 * LEFT + 2 * UP, aligned_edge=LEFT)
         )
         self.add(tgt_aob_label)
 
+        
         # Simple top-down ship deck silhouette (facing RIGHT, pointed bow, flat stern)
         tgt_pts = [
             # Center ship on y-axis: midpoint between bow tip (max x) and stern (min x) at x=0.
@@ -331,7 +403,7 @@ class c_DetectionRanges(Scene):
             current_tgt_aob = tgt_aob.get_value()
             tgt_x =  max(TGT_HEIGHT, abs(TGT_LENGTH*math.cos(current_tgt_aob)))
             return (tgt_x*RES)/(JOHNSON*FOV)
-        
+
         def downtrack_dist():
             # return det_rng() * math.cos(FOV/2) * SCALE_FACTOR
             return det_rng() * SCALE_FACTOR
@@ -342,29 +414,34 @@ class c_DetectionRanges(Scene):
 
 
         # Labels ----------
-        det_rng_label = always_redraw(
-            lambda: Text(
-                f"Detection Range: {det_rng():0.0f} m",
-                font_size=28,
-                color=WHITE,
-            ).shift(4 * LEFT + 1 * UP)
-        )
-        det_rng_label.shift(3*LEFT)
-        def update_det_rng_label(m):
-            m.set_value(det_rng())
-        det_rng_label.add_updater(update_det_rng_label)
-        self.add(det_rng_label)
+        # det_rng_label = always_redraw(
+        #     lambda: Text(
+        #         f"Detection Range: {det_rng():0.0f} m",
+        #         font_size=28,
+        #         color=WHITE,
+        #     ).shift(4 * LEFT + 1 * UP)
+        # )
+        # det_rng_label.shift(3*LEFT)
+        # def update_det_rng_label(m):
+        #     m.set_value(det_rng())
+        # det_rng_label.add_updater(update_det_rng_label)
+        # self.add(det_rng_label)
 
         uav = UAV(fov_width=1, fov_deg=25, w_height_det_fov=False, w_beam_det_fov=False)
         uav.shift(3 * DOWN)
         self.add(uav)
 
-        dy = (uav.get_critical_point(Y_AXIS) - uav.get_center()) * SCALE_FACTOR * UP
+        # Anchor the cone to the UAV "nose" (frontmost point) and keep a constant visual offset
+        # from the UAV center to that nose; do not scale this by SCALE_FACTOR (that's for range geometry).
+        def uav_nose():
+            return uav.get_critical_point(Y_AXIS)
+
+        nose_offset = uav_nose() - uav.get_center()
 
         fov_cone = Polygon(
-                uav.get_critical_point(Y_AXIS) + dy, 
-                uav.get_critical_point(Y_AXIS) + dy + downtrack_dist()*UP + cross_dist()/2*LEFT, 
-                uav.get_critical_point(Y_AXIS) + dy + downtrack_dist()*UP + cross_dist()/2*RIGHT,
+                uav_nose(),
+                uav_nose() + downtrack_dist() * UP + cross_dist() / 2 * LEFT,
+                uav_nose() + downtrack_dist() * UP + cross_dist() / 2 * RIGHT,
                 stroke_color=YELLOW
             ).set_fill(YELLOW, opacity=0.15)
 
@@ -372,11 +449,11 @@ class c_DetectionRanges(Scene):
         fov_cone.add_updater(
             lambda m: m.become(
                 Polygon(
-                    uav.get_critical_point(Y_AXIS) + dy,
-                    uav.get_critical_point(Y_AXIS) + dy
+                    uav.get_center() + nose_offset,
+                    uav.get_center() + nose_offset
                     + downtrack_dist() * UP
                     + (cross_dist() / 2) * LEFT,
-                    uav.get_critical_point(Y_AXIS) + dy
+                    uav.get_center() + nose_offset
                     + downtrack_dist() * UP
                     + (cross_dist() / 2) * RIGHT,
                     stroke_color=YELLOW,
@@ -408,12 +485,9 @@ class c_DetectionRanges(Scene):
 
         uav.add_updater(update_uav_pos)
 
-        # self.play(tgt_aob.animate.set_value(PI/2), run_time=3)
-        # self.play(tgt_aob.animate.set_value(2*PI), run_time=8)
-        self.play(tgt_aob.animate.set_value(PI), run_time=8)
-        # self.play(tgt_aob.animate.set_value(2*PI), run_time=3)
-        # self.play(tgt_aob.animate.set_value(0))
-        self.wait(10)
+        self.play(tgt_aob.animate.set_value(2*PI), run_time=8, rate_func=linear)
+        # self.play(tgt_aob.animate.set_value(PI), run_time=8, rate_func=linear)
+        self.wait(2)
 
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
@@ -658,7 +732,6 @@ class ShortLateralOffsetTurn(BaseScene):
         self.wait(10)
 
 
-
 class LimitingBeamCase(BaseScene):
 
     def construct(self):
@@ -677,7 +750,6 @@ class LimitingBeamCase(BaseScene):
         # tgt.move_to(uav_group.get_edge_center(UP)).shift(uav_group.width/2*RIGHT, aligned_edge=LEFT)
         tgt.move_to(uav_group.get_corner(UR), aligned_edge=LEFT)
         self.add(tgt)
-
 
         # End the animation
         self.wait(20)
