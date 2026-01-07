@@ -281,6 +281,102 @@ class b_DesignTargetIntro(ThreeDScene):
 
 
 
+class c_DetectionRangesWGraph(Scene):
+    def construct(self):
+        # --- Parameters ---
+        TGT_LENGTH = 160  # m
+        TGT_HEIGHT = 40   # m
+        RES = 480
+        JOHNSON = 8
+        FOV_RAD = 60 * 2 * PI / 360
+        
+        # Fixed position for the Target
+        TGT_POS = LEFT * 3 + UP * 2.5
+
+        MAX_DET_RNG = (TGT_LENGTH * RES) / (JOHNSON * FOV_RAD)
+        # Scale range units to screen units
+        SCALE_FACTOR = 4.5 / MAX_DET_RNG 
+
+        # --- Functions ---
+        def get_det_rng(angle):
+            # The "floor" logic based on target height
+            tgt_x = max(TGT_HEIGHT, abs(TGT_LENGTH * math.cos(angle)))
+            return (tgt_x * RES) / (JOHNSON * FOV_RAD)
+
+        def world_angle_to_bow_label(world_angle):
+            world_deg = (world_angle * 180 / PI) % 360
+            bow_deg = (world_deg - 270) % 360
+            if bow_deg == 0: return "0"
+            if bow_deg == 180: return "180"
+            if bow_deg < 180: return f"Starboard {int(round(bow_deg))}"
+            return f"Port {int(round(360 - bow_deg))}"
+
+        # --- Trackers ---
+        tgt_aob = ValueTracker(0)
+        tgt_aob_ref = ValueTracker(0)
+
+        # --- 3) Top Labels (Fixed Position) ---
+        # We use a single VGroup or fixed-position Text items to prevent jumping
+        header_labels = always_redraw(
+            lambda: VGroup(
+                Text(f"AOB: {world_angle_to_bow_label(tgt_aob.get_value())}", font_size=20),
+                Text(f"Tgt Length Crosstrack: {abs(TGT_LENGTH * math.cos(tgt_aob.get_value())):.0f} m", font_size=20),
+                Text(f"Tgt Height: {TGT_HEIGHT} m", font_size=20),
+                Text(f"Range: {get_det_rng(tgt_aob.get_value()):.0f} m", font_size=20)
+            ).arrange(RIGHT, buff=0.5).to_edge(UP, buff=0.3)
+        )
+        self.add(header_labels)
+
+        # --- Plot (Right Side) ---
+        axes = Axes(
+            x_range=[0, 2 * PI, PI / 2],
+            y_range=[0, MAX_DET_RNG * 1.1, 500],
+            x_length=5,
+            y_length=4,
+            axis_config={"include_tip": False, "font_size": 20},
+        ).to_edge(RIGHT, buff=0.5).shift(DOWN * 0.5)
+
+        det_curve = axes.plot(lambda x: get_det_rng(x), color=YELLOW, x_range=[0, 2 * PI])
+        dot = always_redraw(lambda: Dot(color=RED).move_to(
+            axes.c2p(tgt_aob.get_value(), get_det_rng(tgt_aob.get_value()))
+        ))
+        self.add(axes, det_curve, dot)
+
+        # --- 2) Target (Left Side) ---
+        tgt = Polygon(
+            *[0.3 * np.array(p) for p in [(1.8,0,0), (1.2,0.35,0), (-1.8,0.35,0), (-1.8,-0.35,0), (1.2,-0.35,0)]],
+            stroke_color=WHITE, fill_color=GRAY, fill_opacity=0.35
+        ).move_to(TGT_POS)
+        
+        tgt.add_updater(lambda m: m.rotate(tgt_aob.get_value() - tgt_aob_ref.get_value()).move_to(TGT_POS))
+        tgt.add_updater(lambda m: tgt_aob_ref.set_value(tgt_aob.get_value()))
+        self.add(tgt)
+
+        # --- 1) & 2) UAV and FOV ---
+        # The UAV must be at TGT_POS.x (horizontal alignment)
+        # The UAV must be at TGT_POS.y - (current_range * SCALE_FACTOR)
+        uav = UAV(fov_width=1, fov_deg=25, w_height_det_fov=False, w_beam_det_fov=False)
+        
+        def update_uav(m):
+            current_rng_screen = get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR
+            m.move_to([TGT_POS[0], TGT_POS[1] - current_rng_screen, 0])
+
+        uav.add_updater(update_uav)
+        
+        # FOV Cone: Top point is UAV nose, Base is at Target's Y-level
+        fov_cone = always_redraw(lambda: Polygon(
+            uav.get_top(),
+            uav.get_top() + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR) * UP + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR * math.tan(FOV_RAD/2)) * LEFT,
+            uav.get_top() + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR) * UP + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR * math.tan(FOV_RAD/2)) * RIGHT,
+            stroke_color=YELLOW, fill_color=YELLOW, fill_opacity=0.15
+        ))
+        
+        self.add(uav, fov_cone)
+
+        # --- Animation ---
+        self.play(tgt_aob.animate.set_value(PI), run_time=10, rate_func=linear)
+        self.wait(2)
+
 
 class c_DetectionRanges(Scene):
 
