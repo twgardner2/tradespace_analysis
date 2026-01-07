@@ -316,8 +316,8 @@ class c_DetectionRangesWGraph(Scene):
         tgt_aob_ref = ValueTracker(0)
 
         # --- 3) Top Labels (Fixed Position) ---
-        label_fs = 18
-        value_fs = 22
+        label_fs = 28
+        value_fs = 28
         col_w = 3.5  # Width of each column "container"
 
         def create_cell(content_str, is_label=True):
@@ -352,7 +352,7 @@ class c_DetectionRangesWGraph(Scene):
         # --- Plot (Right Side) ---
         axes = Axes(
             x_range=[0, 2 * PI, PI / 2],
-            y_range=[0, MAX_DET_RNG * 1.1, 500],
+            y_range=[0, MAX_DET_RNG * 1.1, 2000],
             x_length=5,
             y_length=4,
             axis_config={"include_tip": False, "font_size": 20},
@@ -398,7 +398,8 @@ class c_DetectionRangesWGraph(Scene):
         self.add(uav, fov_cone)
 
         # --- Animation ---
-        self.play(tgt_aob.animate.set_value(PI), run_time=10, rate_func=linear)
+        self.wait(1)
+        self.play(tgt_aob.animate.set_value(2*PI), run_time=10, rate_func=linear)
         self.wait(2)
 
 
