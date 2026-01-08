@@ -29,31 +29,18 @@ class BaseScene(Scene):
         HEIGHT = 4
         self.N_LANES = 4
 
-        # self.add(NumberPlane(
-        #     background_line_style={
-        #         "stroke_color": TEAL,
-        #         "stroke_width": 4,
-        #         "stroke_opacity": 0.2
-        #     }
-        # ))
-
         # Create the box representing the search area
-        search_area = Rectangle(width=WIDTH, height=HEIGHT, color=BLUE).shift(DOWN * 1)
-        self.search_area = search_area
-        # self.play(Create(search_area))
-        self.add(self.search_area)
-
+        search_perimeter = Rectangle(width=WIDTH, height=HEIGHT, color=BLUE).shift(DOWN * 1)
 
         # Create lanes in the search area
-        lane_width = search_area.width / self.N_LANES
-        self.lane_width = lane_width
+        lane_width = search_perimeter.width / self.N_LANES
 
         lane_boundaries = VGroup()
         for i in range(1, self.N_LANES):
-            lane_x = search_area.get_left()[0] + lane_width * i
+            lane_x = search_perimeter.get_left()[0] + lane_width * i
             boundary = Line(
-                start=search_area.get_bottom() + RIGHT * lane_x,
-                end=search_area.get_top() + RIGHT * lane_x,
+                start=search_perimeter.get_bottom() + RIGHT * lane_x,
+                end=search_perimeter.get_top() + RIGHT * lane_x,
                 color=BLUE,
                 stroke_width=1,
                 # stroke_opacity=0.5
@@ -64,22 +51,34 @@ class BaseScene(Scene):
         flight_paths = VGroup()
         for lane in lane_boundaries:
             flight_path = DashedLine(
-                start=lane.get_start() + 0.5*LEFT,
-                end=lane.get_end() + 0.5*LEFT,
+                start=lane.get_start() + 0.5 * LEFT,
+                end=lane.get_end() + 0.5 * LEFT,
                 color=WHITE,
-                dash_length=0.2
+                dash_length=0.2,
             )
             flight_paths.add(flight_path)
+
         flight_paths.add(
             DashedLine(
-                start=flight_paths[-1].get_start() + lane_width*RIGHT,
-                end=flight_paths[-1].get_end() + lane_width*RIGHT,
+                start=flight_paths[-1].get_start() + lane_width * RIGHT,
+                end=flight_paths[-1].get_end() + lane_width * RIGHT,
                 color=WHITE,
-                dash_length=0.2
+                dash_length=0.2,
             )
         )
-        # Add lanes and flight paths to the scene
-        self.add(lane_boundaries, flight_paths)
+
+        # Attach for later access
+        self.search_perimeter = search_perimeter
+        self.lane_boundaries = lane_boundaries
+        self.flight_paths = flight_paths
+        self.lane_width = lane_width
+
+        # Group them together for convenient transforms/access
+        self.search_box = VGroup(self.search_perimeter, self.lane_boundaries, self.flight_paths)
+
+        # Add to scene
+        self.add(self.search_box)
+
 
 
 class a_LawnMower(BaseScene):
