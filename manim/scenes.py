@@ -458,130 +458,91 @@ class SensorGapWhenTurning(BaseScene):
 
 class ShortLateralOffsetTurn(BaseScene):
     def construct(self):
+        # 1. Setup Parameters & Shift
+        scene_shift = 2 * DOWN
+        self.search_box.shift(scene_shift)
+        
+        S_OFFSET = 1  # s
+        r_tracker = ValueTracker(0.6)
+        
+        # Define the anchor where the turn starts
+        lane_boundary = (2 * UP + 1 * LEFT) + scene_shift
 
-        # Add UAV and it's FOV
+        # 2. UAV Setup
         uav_group = UAV(fov_width=self.lane_width, fov_deg=35)
-        uav_group.scale(0.9).move_to(1*UP + (uav_group.uav.get_top()-uav_group.uav.get_center())*DOWN + LEFT * (3/2)*uav_group.fov_width)
-        self.add(uav_group)
-
-        # Calculations for S < 2R turn
-        s = 1
-        r = ValueTracker(0.6)
-
-        def get_dist():
-            current_r = r.get_value()
-            c = 2*current_r
-            a = current_r + s/2
-            b2 = max(0, c**2 - a**2)
-            return b2**0.5
-        
-        def get_theta1():
-            current_r = r.get_value()
-            return math.acos(  (current_r + s/2   ) / ( 2*current_r  )   )
-        
-        def get_theta2():
-            return math.pi + 2*get_theta1()
-
-
-        lane_boundary = ( 1*UP + 1*LEFT            )
-        # dist_top_uav_to_center_group = uav_group.get_center() - uav.get_top() 
-        # end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
-
-
-        circle1 = always_redraw(
-            lambda: Circle(
-                radius = r.get_value(), 
-                color=ORANGE,
-            ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT))
-        )
-        arc1 = always_redraw(
-            lambda: Arc(
-                radius = r.get_value(), 
-                color=ORANGE,
-                start_angle = 0,
-                angle = get_theta1()
-            ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT))
-        )
-        arc1_inv = always_redraw(
-            lambda: DashedVMobject(
-
-                Arc(
-                    radius = r.get_value(), 
-                    color=ORANGE,
-                    start_angle = get_theta1(),
-                    angle = 2*math.pi - get_theta1(),
-                ).shift(lane_boundary + ((r.get_value()+s/2)*LEFT)
-                ).set_opacity(0.25),
-                num_dashes=20,
-                dashed_ratio=0.5,
-            ) 
-        )
-        arc1_center = always_redraw(
-            lambda: Dot(
-                point = lane_boundary + (r.get_value()+s/2)*LEFT,
-                color = ORANGE
-            )
+        uav_group.scale(0.9).move_to(
+            1 * UP
+            + (uav_group.uav.get_top() - uav_group.uav.get_center()) * DOWN
+            + LEFT * (1.5) * uav_group.fov_width
+            + scene_shift
         )
 
-        arc1_radius_arrow = always_redraw(
-            lambda: Arrow(
-                start = lane_boundary + (r.get_value()+s/2)*LEFT,
-                end = lane_boundary + (r.get_value()+s/2)*LEFT + r.get_value()*math.cos(get_theta1())*UP + r.get_value()*math.sin(get_theta1())*RIGHT,
-                color=ORANGE,
-                buff=0
-            )
-        )
+        # 3. Create the Orange Path (Always Redrawn)
+        def create_orange_path():
+            r = r_tracker.get_value()
+            
+            # Math
+            theta1 = math.acos((r + S_OFFSET / 2) / (2 * r))
+            dist_y = math.sqrt(max(0, (2 * r)**2 - (r + S_OFFSET / 2)**2))
+            
+            # Center Points
+            c1 = lane_boundary + (r + S_OFFSET / 2) * LEFT
+            c2 = lane_boundary + dist_y * UP
+            c3 = lane_boundary + (r + S_OFFSET / 2) * RIGHT
 
-        arc2 = always_redraw(
-            lambda: Arc(
-                radius = r.get_value(), 
-                color=ORANGE,
-                start_angle = -get_theta1(),
-                angle = math.pi + 2*get_theta1()
-            ).shift(lane_boundary + (get_dist()*UP))
-        )
-        arc2_inv = always_redraw(
-            lambda: DashedVMobject(
+            # Arcs (Solid)
+            a1 = Arc(radius=r, start_angle=0, angle=theta1, color=ORANGE).shift(c1)
+            a2 = Arc(radius=r, start_angle=-theta1, angle=PI + 2*theta1, color=ORANGE).shift(c2)
+            a3 = Arc(radius=r, start_angle=PI-theta1, angle=theta1, color=ORANGE).shift(c3)
 
-                Arc(
-                    radius = r.get_value(), 
-                    color=ORANGE,
-                    start_angle = math.pi + get_theta1(),
-                    angle = math.pi - 2*get_theta1(),
-                ).shift(lane_boundary + (get_dist()*UP)
-                ).set_opacity(0.25),
-                num_dashes=20,
-                dashed_ratio=0.5,
-            ) 
-        )
-        
-        arc3 = always_redraw(
-            lambda: Arc(
-                radius = r.get_value(), 
-                color=ORANGE,
-                start_angle = math.pi-get_theta1(),
-                angle = get_theta1()
-            ).shift(lane_boundary + ((r.get_value()+s/2)*RIGHT))
-        )
-        arc3_inv = always_redraw(
-            lambda: DashedVMobject(
+            # Arcs (Dashed/Ghost)
+            a1_ghost = DashedVMobject(Arc(radius=r, start_angle=theta1, angle=TAU-theta1).shift(c1), num_dashes=20).set_opacity(0.25)
+            a2_ghost = DashedVMobject(Arc(radius=r, start_angle=PI+theta1, angle=PI-2*theta1).shift(c2), num_dashes=10).set_opacity(0.25)
+            a3_ghost = DashedVMobject(Arc(radius=r, start_angle=PI, angle=TAU-theta1).shift(c3), num_dashes=20).set_opacity(0.25)
 
-                Arc(
-                    radius = r.get_value(), 
-                    color=ORANGE,
-                    start_angle = math.pi,
-                    angle = 2*math.pi - get_theta1(),
-                ).shift(lane_boundary + ((r.get_value()+s/2)*RIGHT)
-                ).set_opacity(0.25),
-                num_dashes=20,
-                dashed_ratio=0.5,
-            ) 
-        )
+            # Center and Arrow
+            center_dot = Dot(c1, color=ORANGE, radius=0.06)
+            # radius_arrow = Arrow(start=c1, end=a1.get_start(), color=ORANGE, buff=0)
+            radius_arrow = Arrow(start=c1, end=c1 + r*math.cos(theta1)*RIGHT + r*math.sin(theta1)*UP, color=ORANGE, buff=0)
 
-        r_label = DecimalNumber(
-            r.get_value(),
-            num_decimal_places=1,
-            include_sign=False,
+            return VGroup(a1, a2, a3, a1_ghost, a2_ghost, a3_ghost, center_dot, radius_arrow)
+
+        orange_path = always_redraw(create_orange_path)
+
+        # 4. Straight Lines (Transitions)
+        # Using a simple updater to keep them attached to the UAV if it moves
+        uav_nose = uav_group.get_critical_point(Y_AXIS)
+        line_out = Line(uav_nose, uav_nose + 1*UP, color=ORANGE)
+        line_in = line_out.copy().shift(S_OFFSET * RIGHT)
+
+        # 5. Radius Label & Dynamic Scaling
+        r_label = DecimalNumber(r_tracker.get_value(), num_decimal_places=1, color=ORANGE)
+
+        def update_label(m):
+            r_val = r_tracker.get_value()
+            # Reference the arrow from the always_redraw group
+            arrow = orange_path[-1] 
+            m.set_value(r_val)
+            m.next_to(arrow, LEFT, buff=0.1)
+            
+            # Dynamic text scaling
+            new_h = interpolate(0.1, 1.0, (r_val - 1) / 5)
+            m.set_height(max(0.1, min(1.0, new_h)))
+
+        r_label.add_updater(update_label)
+
+        # 6. Add and Play
+        self.add(uav_group, orange_path, line_out, line_in, r_label)
+
+        self.play(r_tracker.animate.set_value(1.0))
+        self.play(r_tracker.animate.set_value(0.8))
+        self.play(r_tracker.animate.set_value(2.0))
+        self.play(r_tracker.animate.set_value(1.0))
+        self.wait(2)
+
+
+
+
             color=ORANGE
         )
         def update_radius_label(m):
