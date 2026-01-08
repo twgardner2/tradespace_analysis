@@ -33,13 +33,21 @@ convert_one() {
 
     echo "Converting $in... placing in $out"
 
-    # Reduce GIF size: scale down + reduce FPS (override with GIF_WIDTH/GIF_FPS env vars)
+    # Settings for size reduction
     local width="${GIF_WIDTH:-640}"
-    local fps="${GIF_FPS:-15}"
+    local fps="${GIF_FPS:-12}" # Reduced from 15 to 12 for better compression
+
+    # Optimization strategy: 
+    # 1. Scale and reduce FPS first.
+    # 2. palettegen=stats_mode=diff: Only looks at pixels that change (great for Manim).
+    # 3. paletteuse=dither=sierra2_4a: Better compression than the default bayer dither.
     ffmpeg -y -i "$in" -filter_complex \
-        "[0:v] split [a][b]; [a] palettegen [p]; [b][p] paletteuse" \
+        "[0:v] fps=$fps,scale=$width:-1:flags=lanczos,split [a][b]; \
+         [a] palettegen=stats_mode=diff [p]; \
+         [b][p] paletteuse=dither=sierra2_4a" \
         "$out"
 }
+
 
 find_by_name() {
     local name="$1"
