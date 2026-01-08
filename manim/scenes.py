@@ -20,7 +20,7 @@ from scene_helpers import (
 
 TEXT_WRITE_TIME = 1 # seconds
 
-class BaseScene(Scene):
+class BaseScene(MovingCameraScene):
     def setup(self):
         # config.frame_height = 6
         # config.frame_width = 8
@@ -83,6 +83,9 @@ class BaseScene(Scene):
 
 class a_LawnMower(BaseScene):
     def construct(self):
+
+        self.camera.frame_height = 6.5
+        self.camera.frame_center = [0, -1, 0]
 
         # Add some targets to the scene
         ## Target 1
@@ -289,16 +292,12 @@ class c_DetectionRangesWGraph(Scene):
         JOHNSON = 8
         FOV_RAD = 60 * 2 * PI / 360
         
-        # Fixed position for the Target
         TGT_POS = LEFT * 3 + UP * 2.5
-
         MAX_DET_RNG = (TGT_LENGTH * RES) / (JOHNSON * FOV_RAD)
-        # Scale range units to screen units
         SCALE_FACTOR = 4.5 / MAX_DET_RNG 
 
         # --- Functions ---
         def get_det_rng(angle):
-            # The "floor" logic based on target height
             tgt_x = max(TGT_HEIGHT, abs(TGT_LENGTH * math.cos(angle)))
             return (tgt_x * RES) / (JOHNSON * FOV_RAD)
 
@@ -314,22 +313,15 @@ class c_DetectionRangesWGraph(Scene):
         tgt_aob = ValueTracker(0)
         tgt_aob_ref = ValueTracker(0)
 
-        # --- 3) Top Labels (Fixed Position) ---
+        # --- Labels ---
         label_fs = 28
         value_fs = 28
-        col_w = 3.5  # Width of each column "container"
+        col_w = 3.5
 
         def create_cell(content_str, is_label=True):
-            # Create the text with a consistent font size
             txt = Text(content_str, font_size=label_fs if is_label else value_fs)
-            
-            # Create an invisible box to define the column width
-            # This ensures the 'center' or 'edge' of the cell remains fixed
             frame = Rectangle(width=col_w, height=0.5, stroke_opacity=0, fill_opacity=0)
-            
-            # Align text to the left side of the invisible frame
             txt.move_to(frame.get_left(), aligned_edge=LEFT)
-            
             return VGroup(frame, txt)
 
         header_labels = VGroup(
@@ -345,10 +337,9 @@ class c_DetectionRangesWGraph(Scene):
                 create_cell(f"{TGT_HEIGHT} m", is_label=False),
             ).arrange(RIGHT, buff=0.2).next_to(header_labels, DOWN, buff=0.1, aligned_edge=LEFT)
         )
-
         self.add(header_labels, header_values)
 
-        # --- Plot (Right Side) ---
+        # --- Plot ---
         axes = Axes(
             x_range=[0, 2 * PI, PI / 2],
             y_range=[0, MAX_DET_RNG * 1.1, 2000],
@@ -363,7 +354,7 @@ class c_DetectionRangesWGraph(Scene):
         ))
         self.add(axes, det_curve, dot)
 
-        # --- 2) Target (Left Side) ---
+        # --- Target ---
         tgt = Polygon(
             *[0.3 * np.array(p) for p in [(1.8,0,0), (1.2,0.35,0), (-1.8,0.35,0), (-1.8,-0.35,0), (1.2,-0.35,0)]],
             stroke_color=WHITE, fill_color=GRAY, fill_opacity=0.35
@@ -373,20 +364,19 @@ class c_DetectionRangesWGraph(Scene):
         tgt.add_updater(lambda m: tgt_aob_ref.set_value(tgt_aob.get_value()))
         self.add(tgt)
 
-        # --- 1) & 2) UAV and FOV ---
-        # The UAV must be at TGT_POS.x (horizontal alignment)
-        # The UAV must be at TGT_POS.y - (current_range * SCALE_FACTOR)
+        # --- UAV and FOV ---
         uav = UAV(fov_width=1, fov_deg=25, w_height_det_fov=False, w_beam_det_fov=False)
         
         def update_uav(m):
             current_rng_screen = get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR
-            # TGT_POS[0] is X, TGT_POS[1] is Y
             m.move_to([TGT_POS[0], TGT_POS[1] - current_rng_screen, 0])
 
-
+        # FIX: Explicitly set position BEFORE adding to scene to prevent origin-jump
+        initial_rng_screen = get_det_rng(0) * SCALE_FACTOR
+        uav.move_to([TGT_POS[0], TGT_POS[1] - initial_rng_screen, 0])
+        
         uav.add_updater(update_uav)
         
-        # FOV Cone: Top point is UAV nose, Base is at Target's Y-level
         fov_cone = always_redraw(lambda: Polygon(
             uav.get_top(),
             uav.get_top() + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR) * UP + (get_det_rng(tgt_aob.get_value()) * SCALE_FACTOR * math.tan(FOV_RAD/2)) * LEFT,
