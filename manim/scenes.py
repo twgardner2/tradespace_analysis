@@ -441,12 +441,12 @@ class SensorGapWhenTurning(BaseScene):
         ).set_fill(WHITE, opacity=0.3)
         self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
 
-        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_area, UP).shift(2*LEFT + 0.15*UP)
+        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_box, UP).shift(2*LEFT + 0.15*UP)
         not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
 
         not_covered_level_text = Paragraph(
             'Not Covered', 'Straight & Level', color=BLUE, font_size=20, alignment='center'
-        ).next_to(self.search_area, UP).shift(1*RIGHT)
+        ).next_to(self.search_box, UP).shift(1*RIGHT)
         not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
 
         self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
