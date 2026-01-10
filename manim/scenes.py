@@ -877,10 +877,11 @@ class g_LimitingBeamingCase(BaseScene):
 
 
         # Animation
+        uav_leg_time = 1.7
         self.play(
             Succession(
                 # 1. Shift upwards
-                ApplyMethod(uav.move_to, end_first_leg, rate_func=linear),
+                ApplyMethod(uav.move_to, end_first_leg, rate_func=linear, run_time=uav_leg_time),
 
                 # 2. Rotate
                 Rotate(
@@ -891,7 +892,7 @@ class g_LimitingBeamingCase(BaseScene):
                 ),
 
                 # 3. Align the DOWN (bottom) edge of the uav to the DOWN edge of the search_box
-                ApplyMethod(uav.align_to, self.search_box, DOWN, rate_func=linear),
+                ApplyMethod(uav.align_to, self.search_box, DOWN, rate_func=linear, run_time=0.4*uav_leg_time),
             )
         )
         self.wait(2)
