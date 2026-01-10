@@ -688,70 +688,10 @@ class d_SemiCircleTurn(BaseSceneSemiCircleTurn):
 
         self.wait(2)
 
-class SensorGapWhenTurning(BaseScene):
-    def construct(self):
-
-
-        # Add UAV and FOV to the scene
-        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = True, w_beam_det_fov=False)
-        uav_group.scale(0.9).move_to(2*DOWN + LEFT * (3/2)*uav_group.fov_width)
-        self.add(uav_group)
-
-        dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
-        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
-        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
-        turn_rotation_point = ( 1*UP + 1*LEFT            )
-        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
-
-        # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
-        # self.add(turn_rot_point_dot)
-
-        self.play(
-            Succession(
-                # 1. Shift upwards
-                ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
-                
-                # 2. Rotate
-                Rotate(
-                    uav_group, 
-                    angle=-PI, 
-                    about_point=turn_rotation_point,
-                    rate_func=linear
-                ),
-            )
-        )
-
-        # Draw sensor gap
-        not_covered_gap = Polygon(
-            uav_group.uav.get_bottom(), 
-            uav_group.uav.get_bottom() + LEFT*self.lane_width/2, 
-            uav_group.uav.get_bottom() + LEFT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
-            stroke_width=0.5
-        ).set_fill(WHITE, opacity=0.3)
-        not_covered_level_gap = Polygon(
-            uav_group.uav.get_bottom(), 
-            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2, 
-            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
-            stroke_width=0.5
-        ).set_fill(WHITE, opacity=0.3)
-        self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
-
-        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_box, UP).shift(2*LEFT + 0.15*UP)
-        not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
-
-        not_covered_level_text = Paragraph(
-            'Not Covered', 'Straight & Level', color=BLUE, font_size=20, alignment='center'
-        ).next_to(self.search_box, UP).shift(1*RIGHT)
-        not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
-
-        self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
-
-        # End the animation
-        self.wait(10)
 
 
 
-class ShortLateralOffsetTurn(BaseScene):
+class e_ShortLateralOffsetTurn(BaseScene):
     def construct(self):
         # 1. Setup Parameters & Shift
         scene_shift = 2 * DOWN
@@ -837,8 +777,68 @@ class ShortLateralOffsetTurn(BaseScene):
 
 
 
-class LimitingBeamingCase(BaseScene):
+class f_SensorGapWhenTurning(BaseScene):
+    def construct(self):
 
+
+        # Add UAV and FOV to the scene
+        uav_group = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = True, w_beam_det_fov=False)
+        uav_group.scale(0.9).move_to(2*DOWN + LEFT * (3/2)*uav_group.fov_width)
+        self.add(uav_group)
+
+        dist_top_uav_to_center_group = uav_group.get_center() - uav_group.uav.get_top() 
+        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
+        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
+        turn_rotation_point = ( 1*UP + 1*LEFT            )
+        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
+
+        # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
+        # self.add(turn_rot_point_dot)
+
+        self.play(
+            Succession(
+                # 1. Shift upwards
+                ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
+                
+                # 2. Rotate
+                Rotate(
+                    uav_group, 
+                    angle=-PI, 
+                    about_point=turn_rotation_point,
+                    rate_func=linear
+                ),
+            )
+        )
+
+        # Draw sensor gap
+        not_covered_gap = Polygon(
+            uav_group.uav.get_bottom(), 
+            uav_group.uav.get_bottom() + LEFT*self.lane_width/2, 
+            uav_group.uav.get_bottom() + LEFT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
+            stroke_width=0.5
+        ).set_fill(WHITE, opacity=0.3)
+        not_covered_level_gap = Polygon(
+            uav_group.uav.get_bottom(), 
+            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2, 
+            uav_group.uav.get_bottom() + RIGHT*self.lane_width/2 + (uav_group.uav.get_bottom()-uav_group.fov_height.get_bottom())*DOWN,
+            stroke_width=0.5
+        ).set_fill(WHITE, opacity=0.3)
+        self.play(FadeIn(not_covered_gap), FadeIn(not_covered_level_gap))
+
+        not_covered_text = Text('Not Covered', color=BLUE, font_size=20).next_to(self.search_box, UP).shift(2*LEFT + 0.15*UP)
+        not_covered_arrow = Arrow(not_covered_text.get_bottom(), not_covered_gap.get_center(), color=BLUE)
+
+        not_covered_level_text = Paragraph(
+            'Not Covered', 'Straight & Level', color=BLUE, font_size=20, alignment='center'
+        ).next_to(self.search_box, UP).shift(1*RIGHT)
+        not_covered_level_arrow = Arrow(not_covered_level_text.get_bottom(), not_covered_level_gap.get_center(), color=BLUE)
+
+        self.play(Write(not_covered_text), Write(not_covered_arrow), Write(not_covered_level_text), Write(not_covered_level_arrow), run_time=TEXT_WRITE_TIME)
+
+        # End the animation
+        self.wait(10)
+
+class g_LimitingBeamingCase(BaseScene):
 
     def construct(self):
 
