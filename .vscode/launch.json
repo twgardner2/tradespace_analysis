@@ -33,6 +33,20 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+        {
+            "name": "g_LimitingBeamingCase",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "manim",
+            "args": [
+                "--config_file",
+                "./manim/manim.cfg",
+                "./manim/scenes.py",
+                "g_LimitingBeamingCase" // Scene to debug
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
     ]
 }
