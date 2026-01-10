@@ -796,7 +796,6 @@ class ShortLateralOffsetTurn(BaseScene):
 
             # Center and Arrow
             center_dot = Dot(c1, color=ORANGE, radius=0.06)
-            # radius_arrow = Arrow(start=c1, end=a1.get_start(), color=ORANGE, buff=0)
             radius_arrow = Arrow(start=c1, end=c1 + r*math.cos(theta1)*RIGHT + r*math.sin(theta1)*UP, color=ORANGE, buff=0)
 
             return VGroup(a1, a2, a3, a1_ghost, a2_ghost, a3_ghost, center_dot, radius_arrow)
@@ -837,41 +836,7 @@ class ShortLateralOffsetTurn(BaseScene):
 
 
 
-            color=ORANGE
-        )
-        def update_radius_label(m):
-            m.set_value(r.get_value())
-            m.next_to(arc1_radius_arrow, LEFT, buff=0.1)
-
-            def clamp(n, minimum, maximum):
-                return min(maximum, max(n, minimum))
-
-            min_text_height = 0.1
-            min_r = 1
-            max_text_height = 1
-            max_r = 6
-
-            text_height = (max_text_height-min_text_height)/(max_r-min_r)*r.get_value()
-            m.set_height(clamp(text_height, min_text_height, max_text_height))
-
-        r_label.add_updater(update_radius_label)
-
-        self.add(r, r_label)
-
-        self.add(
-            arc1, arc1_inv, arc1_center, arc1_radius_arrow,
-            arc2, arc2_inv, 
-            arc3, arc3_inv
-        )
-
-
-        # turn_rot_point_dot = Dot(point=turn_rotation_point, color=RED)
-        # self.add(turn_rot_point_dot)
-
-        # self.play(
-        #     Succession(
-        #         # 1. Shift upwards
-        #         ApplyMethod(uav_group.move_to, end_first_leg, rate_func=linear),
+class LimitingBeamingCase(BaseScene):
                 
         #         # 2. Rotate
         #         Rotate(
