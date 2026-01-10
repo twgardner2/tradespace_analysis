@@ -30,9 +30,9 @@ machs     = np.arange(0.4, 0.90001, 0.025)
 sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
 # JOHNSON_CRITERIA = 2 # Recognize
-JOHNSON_CRITERIA = 8 # Identify
-# JOHNSON_CRITERIA = 13 # Classify
-# JOHNSON_CRITERIA = 4 # Testing
+JOHNSON_CRITERIA = 6 # Identify
+# JOHNSON_CRITERIA = 12 # Classify
+# JOHNSON_CRITERIA = 14 # Testing
 
 MANX_BANK_ANGLE_DEG = 35
 MANX_BANK_ANGLE_RAD = MANX_BANK_ANGLE_DEG * RAD_PER_DEG
@@ -42,20 +42,20 @@ MANX_MIN_MACH = 0.15
 
 TARGET = DesignTarget(
     type      = "Frigate",
-    dims      = (150, 40), # m, (horizontal, vertical)
+    dims      = (160, 40), # m, (horizontal, vertical)
     max_speed = 25 # knots
 )
 
 SENSOR_ASSUMPTIONS = {
     Sensor.LOW: SensorAssumption(
         fov_deg     = (15, 15),
-        resolution  = (640, 640),
+        resolution  = (480, 480),
         johnson_req = JOHNSON_CRITERIA,
         cost        = 0.05
     ),
     Sensor.MED: SensorAssumption(
         fov_deg     = (30, 30),
-        resolution  = (1024, 1024),
+        resolution  = (960, 960),
         johnson_req = JOHNSON_CRITERIA,
         cost        = 1
     ),
