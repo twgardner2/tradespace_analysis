@@ -25,7 +25,7 @@ AOI = AOI(
 
 AOI_REVISIT_TIME_HR = 6 # hours
 
-altitudes = np.arange(5, 25.00001, 1)
+altitudes = np.arange(5, 25.00001, 0.5)
 machs     = np.arange(0.4, 0.90001, 0.025)
 sensors   = [Sensor['LOW'], Sensor['MED'], Sensor['HIGH']]
 
