@@ -1,0 +1,84 @@
+% This is a comment, ignored by the compiler.
+
+% The next line defines the document class and begins the preamble.
+\documentclass{article}
+
+% The preamble can include packages to add functionality.
+\usepackage{amsmath} 
+\usepackage{xcolor}
+
+\title{Your Document Title}
+\author{Your Name}
+\date{\today} % Optional: \date{} leaves the date field empty
+
+\begin{document}
+	
+	% Commands like \maketitle generate the title section from the preamble info.
+	\maketitle
+	
+	\section{Introduction}
+		Johnson = 6 pixels $\implies$ "Recognize" as a Warship
+	\section{Mathematics Example}
+	You can easily include mathematical expressions, such as the equation for a line:
+	\[
+	y = mx + b
+	\]
+	Or an inline expression like $\alpha + \beta = \Gamma$.
+	
+	
+	\[
+		\text{IFOV} = \frac{\text{Field of View}}{\text{\# of Pixels}} \tag{1}
+	\]
+	
+	
+	
+	\begin{align*}
+		\tan \left( \frac{\textcolor{purple}{\text{IFOV}}}{\textcolor{purple}{2}} \right) 
+		&= \frac{\textcolor{red}{\text{GSD}}}{\textcolor{red}{2}*\textcolor{green}{\text{Range}}} \\
+		\text{for small } \theta \text{,} \tan \left( \theta \right) = \theta 
+		\implies \frac{\textcolor{purple}{\text{IFOV}}}{\textcolor{purple}{2}} &= \frac{\textcolor{red}{\text{GSD}}}{\textcolor{red}{2}*\textcolor{green}{\text{Range}}} \\
+		\textcolor{green}{\text{Range}} &=  \frac{\textcolor{red}{\text{GSD}}}{\textcolor{purple}{\text{IFOV}}} \tag{2}
+		%𝑓𝑜𝑟 𝑠𝑚𝑎𝑙𝑙 𝜃, tan⁡𝜃=𝜃 →┴𝐼𝐹𝑂𝑉/2=𝐺𝑆𝐷/(2∗𝑅𝑎𝑛𝑔𝑒)
+	\end{align*}
+	
+	\pagebreak
+	
+	\begin{align*}
+		&\textcolor{green}{\text{GSD}_{\text{detection}}} = \textcolor{green}{\frac{\text{Target Dimension}}{\text{Johnson}}} \tag{3} %\\[1cm] % Add vertical space		
+		\intertext{\centering Plug expressions (1) and (3) into (2):}
+		\textcolor{red}{\text{IFOV}} &= \textcolor{red}{\frac{\text{Field of View}}{\text{\# of Pixels}}} \tag{1} \\[0.25cm]		
+		\text{Range} &= \frac{\textcolor{green}{\text{GSD}}}{\textcolor{red}{\text{IFOV}}} \tag{2} \\[0.25cm]		
+		\text{Range} &= \frac{\text{Target Dimension} * \text{Field of View}}{\text{Johnson} * \text{\# of Pixels}}
+	\end{align*}
+	
+
+	\begin{align*}
+		\text{Search Rate} &= 
+		\frac{\text{\# Search Legs} * \text{Effective Search Width} * \text{AOI Length}}
+		{\text{Flight Time}} \\  \\
+%	\end{align*}
+%	\begin{align*}
+		\text{\# Req ONSTA Aircraft} &= 
+		\frac{\text{AOI Area}}
+		{\text{Search Rate}*\text{Revisit Time}}  \\ \\
+		\text{ONSTA Aircraft Cost} &= 
+		\text{\# Req ONSTA Aircraft} * \text{Aircraft Unit Cost} \\ \\
+	\end{align*}
+	% n_onsta = (aoi.length * aoi.width) / revisit_time / ac_search_rate
+	
+	\pagebreak
+	
+	\begin{align*}
+		\text{Turn Radius} &= \frac{V^2}{g \cdot \tan(\theta)} \\
+		\\
+		\text{Lateral Offset (S)} &\ge 2R \\
+		\\
+		\text{S} &< 2R \\
+		\\
+		%\text{D} &= \pi{R}+\left( \text{Lateral Offset}-\text{2R}\right)
+		\text{D} &= \pi{R}+ \text{S}-\text{2R} \\
+		\\
+		\text{D} &= \text{R}\left(\pi + 4\cos^{-1}\left(\frac{R+\frac{S}{2}}{2R}\right)\right)\\
+	\end{align*}
+	
+\end{document}

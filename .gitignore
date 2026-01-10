@@ -14,3 +14,6 @@ manim/videos/*
 !manim/videos/.gitkeep
 manim/gifs/*
 !manim/gifs/.gitkeep
+
+tex/*
+!tex/equations.tex
