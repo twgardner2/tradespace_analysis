@@ -51,7 +51,7 @@ df <- df %>%
 sensor_color_scale <- RColorBrewer::brewer.pal(3, 'Dark2')
 names(sensor_color_scale) <- unique(df$sensor)
 ## Feasibility plot
-p2 <- make_sensor_feasibility_plot(
+make_sensor_feasibility_plot(
   df,
   sensor_color_scale,
   ALTITUDE_BOUNDS,
@@ -62,7 +62,7 @@ p2 <- make_sensor_feasibility_plot(
 
 
 # ## Cost plots
-p3 <- make_cost_heatmap(
+make_cost_heatmap(
   df,
   sensor_color_scale,
   ALTITUDE_BOUNDS,
