@@ -81,6 +81,89 @@ class BaseScene(MovingCameraScene):
 
 
 
+class BaseSceneSemiCircleTurn(MovingCameraScene):
+    def setup(self):
+        # config.frame_height = 6
+        # config.frame_width = 8
+
+        WIDTH = 5
+        HEIGHT = 4
+        self.N_LANES = 5
+
+        # Create the box representing the search area
+        search_perimeter = Rectangle(width=WIDTH, height=HEIGHT, color=BLUE).shift(DOWN * 1)
+
+        # Create lanes in the search area
+        lane_width = search_perimeter.width / self.N_LANES
+
+        lane_boundaries = VGroup()
+        for i in range(1, self.N_LANES-1):
+            lane_x = search_perimeter.get_left()[0] + lane_width * i
+            boundary = Line(
+                start=search_perimeter.get_bottom() + RIGHT * lane_x,
+                end=search_perimeter.get_top() + RIGHT * lane_x,
+                color=BLUE,
+                stroke_width=1,
+                # stroke_opacity=0.5
+            )
+            lane_boundaries.add(boundary)
+        print(lane_boundaries)
+
+        # Add dotted flight paths in the center of each lane
+        flight_paths = VGroup()
+
+        # First N_LANES-1 normal lanes
+        # for lane in lane_boundaries:
+        #     flight_path = DashedLine(
+        #         start=lane.get_start() + 0.5 * LEFT,
+        #         end=lane.get_end() + 0.5 * LEFT,
+        #         color=WHITE,
+        #         dash_length=0.2,
+        #     )
+        #     flight_paths.add(flight_path)
+        for i in range(len(lane_boundaries)):
+            if i<len(lane_boundaries):
+                flight_path = DashedLine(
+                    start=lane_boundaries[i].get_start() + 0.5 * LEFT,
+                    end=lane_boundaries[i].get_end() + 0.5 * LEFT,
+                    color=WHITE,
+                    dash_length=0.2,
+                )
+            else:
+                flight_path = DashedLine(
+                    start=lane_boundaries[i].get_start() + 0.5 * LEFT,
+                    end=lane_boundaries[i].get_end() + 0.5 * LEFT,
+                    color=WHITE,
+                    dash_length=0.2,
+                )
+                
+            flight_paths.add(flight_path)
+
+
+        # Rightmost lane is DOUBLE width → center is shifted right by +lane_width
+        flight_paths.add(
+            DashedLine(
+                start=flight_paths[-1].get_start() + 1.5*lane_width * RIGHT,
+                end=flight_paths[-1].get_end() + 1.5*lane_width * RIGHT,
+                color=WHITE,
+                dash_length=0.2,
+            )
+        )
+
+        # Attach for later access
+        self.search_perimeter = search_perimeter
+        self.lane_boundaries = lane_boundaries
+        self.flight_paths = flight_paths
+        self.lane_width = lane_width
+
+        # Group them together for convenient transforms/access
+        self.search_box = VGroup(self.search_perimeter, self.lane_boundaries, self.flight_paths)
+
+        # Add to scene
+        self.add(self.search_box)
+
+
+
 class a_LawnMower(BaseScene):
     def construct(self):
 
@@ -392,6 +475,217 @@ class c_DetectionRangesWGraph(Scene):
         self.wait(2)
 
 
+
+class d_SemiCircleTurn(BaseSceneSemiCircleTurn):
+    def construct(self):
+        
+        orig_height = self.camera.frame_height
+        orig_width  = self.camera.frame_width
+
+        self.camera.frame_height = 5
+        self.camera.frame_width  = self.camera.frame_height * orig_width/orig_height
+        self.camera.frame_center = [0, 1, 0]
+
+        # Add UAVs to the scene
+        uav1 = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+        uav1.scale(0.9).move_to(2*DOWN + 1.25*LEFT * (3/2)*uav1.fov_width)
+        uav2 = UAV(fov_width=self.lane_width, fov_deg = 35,  w_height_det_fov = False, w_beam_det_fov=False)
+        uav2.scale(0.9).move_to(2*DOWN + 0   *RIGHT * (3/2)*uav2.fov_width)
+        self.add(uav1, uav2)
+
+        uav_offset = (uav1.get_top() - uav1.get_center())
+
+        end_first_leg              =   2*LEFT  + 1*UP + uav_offset*DOWN
+        end_first_leg_turn_point   = 1.5*LEFT  + 1*UP 
+        start_second_leg           =   1*LEFT  + 1*UP + uav_offset*DOWN
+        end_second_leg             = 0.5*LEFT  + 3*DOWN + uav_offset*UP
+        end_second_leg_turn_point  = 0  *LEFT  + 3*DOWN 
+        end_third_leg              =   0*RIGHT + 1*UP + uav_offset*DOWN
+        end_third_leg_turn_point1  = end_third_leg + 0.5*RIGHT + uav_offset*UP
+        end_third_leg_turn_point2  = end_third_leg +   1*RIGHT + uav_offset*UP
+        start_fourth_leg           = 1.5*RIGHT + 1*UP + uav_offset*DOWN
+        end_fourth_leg             = 1.5*RIGHT + 3*DOWN + uav_offset*UP
+
+        # dot3 = Dot(end_third_leg_turn_point1, color=RED)
+        # dot4 = Dot(end_third_leg_turn_point2, color=RED)
+        # self.add(dot3, dot4)
+
+
+        # Annotations of first turn
+        brace = BraceBetweenPoints(end_first_leg, start_second_leg, direction=UP, color=ORANGE)
+        brace_label = MathTex('S', font_size=38, color=ORANGE)
+        brace_label.next_to(brace, direction=UP)
+
+        # Semi-circle tangent to the brace endpoints (diameter = brace endpoints)
+        semi_circle = ArcBetweenPoints(
+            end_first_leg + uav_offset*UP,
+            start_second_leg + uav_offset*UP,
+            angle=-PI,
+            color=ORANGE,
+        )
+        # Radius line from the semi-circle center to the point 45° from the +x axis
+        semi_circle_center = 0.5 * (
+            end_first_leg + start_second_leg
+        ) + (uav1.get_top() - uav1.get_center()) * UP
+
+        semi_circle_radius = 0.5 * np.linalg.norm(end_first_leg - start_second_leg)
+        semi_circle_radius_line = Line(
+            semi_circle_center,
+            semi_circle_center + semi_circle_radius * (np.cos(PI / 4) * RIGHT + np.sin(PI / 4) * UP),
+            color=ORANGE,
+        )
+        semi_circle_radius_label = MathTex('R', font_size=38, color=ORANGE)
+        semi_circle_radius_label.next_to(semi_circle_radius_line, direction=[1,1,0], buff=0.1)
+        
+        # Annotations of second turn
+        brace2 = BraceBetweenPoints(end_third_leg, start_fourth_leg, direction=UP, color=ORANGE)
+        brace2_label = MathTex('S', font_size=38, color=ORANGE)
+        brace2_label.next_to(brace2, direction=UP)
+
+        # Semi-circle tangent to the brace endpoints (diameter = brace endpoints)
+        semi_circle2 = semi_circle.copy().shift(2*RIGHT)
+        semi_circle2_center = end_third_leg + 0.5*RIGHT + uav_offset*UP
+
+        semi_circle2_radius_line = Line(
+            semi_circle2_center,
+            semi_circle2_center + semi_circle_radius * (np.cos(PI / 4) * RIGHT + np.sin(PI / 4) * UP),
+            color=ORANGE,
+        )
+        semi_circle2_radius_label = MathTex('R', font_size=38, color=ORANGE)
+        semi_circle2_radius_label.next_to(semi_circle2_radius_line, direction=[1,1,0], buff=0.1)
+
+
+
+        # Animations
+        self.play(
+            ApplyMethod(uav1.move_to, end_first_leg, rate_func=linear),
+            ApplyMethod(uav2.move_to, end_third_leg, rate_func=linear),
+        )
+
+        # Fade in braces after the first move_to
+        # self.play(FadeIn(brace), FadeIn(brace_label),FadeIn(brace2), FadeIn(brace2_label))
+        self.play(Create(brace), Create(brace_label),Create(brace2), Create(brace2_label))
+        self.wait(1)
+        self.play(FadeOut(brace), FadeOut(brace2))
+        self.play(
+            ApplyMethod(brace_label.move_to,   brace_label.get_center() + 0.5*UP + 0.5*LEFT, rate_func=linear),
+            ApplyMethod(brace2_label.move_to, brace2_label.get_center() + 0.5*UP + 0.5*LEFT, rate_func=linear),
+        )
+        self.play(
+            Create(semi_circle), 
+            Create(semi_circle_radius_line), 
+            Create(semi_circle_radius_label),
+            Create(semi_circle2), 
+            Create(semi_circle2_radius_line), 
+            Create(semi_circle2_radius_label)
+        )
+        self.wait(1)
+        self.play(
+            # FadeOut(semi_circle), 
+            FadeOut(semi_circle_radius_line),
+            # FadeOut(semi_circle2), 
+            FadeOut(semi_circle2_radius_line),
+        )
+        eq_gap = 0.32   # horizontal gap for "="
+        gt_gap = 0.32   # horizontal gap for ">"
+
+        self.play(
+            ApplyMethod(
+                semi_circle_radius_label.move_to,
+                brace_label.get_center() + (0.5 + eq_gap) * RIGHT,
+                rate_func=linear,
+            ),
+            ApplyMethod(
+                semi_circle2_radius_label.move_to,
+                brace2_label.get_center() + (0.5 + gt_gap) * RIGHT,
+                rate_func=linear,
+            ),
+        )
+
+        turn1_eq = MathTex('=', font_size=38, color=ORANGE)
+        turn2_eq = MathTex('>', font_size=38, color=ORANGE)
+
+        # Place "=" and ">" between their respective S and R labels
+        turn1_eq.move_to(midpoint(brace_label.get_center(), semi_circle_radius_label.get_center()))
+        turn2_eq.move_to(midpoint(brace2_label.get_center(), semi_circle2_radius_label.get_center()))
+
+        self.play(FadeIn(turn1_eq), FadeIn(turn2_eq))
+
+        # Break semi_circle2 into two halves, shift right half, and connect with a straight segment
+        semi_circle2_left = ArcBetweenPoints(
+            end_third_leg + uav_offset * UP,
+            semi_circle2_center + semi_circle_radius * UP,
+            angle=-PI / 2,
+            color=ORANGE,
+        )
+        semi_circle2_right = ArcBetweenPoints(
+            semi_circle2_center + semi_circle_radius * UP,
+            semi_circle2_center + semi_circle_radius * RIGHT,
+            # start_fourth_leg + uav_offset * UP,
+            angle=-PI / 2,
+            color=ORANGE,
+        )
+
+        # Swap the single arc for the two-half arcs without a visible pop
+        semi_circle2_left.set_z_index(semi_circle2.get_z_index())
+        semi_circle2_right.set_z_index(semi_circle2.get_z_index())
+
+        self.add(semi_circle2_left, semi_circle2_right)
+        self.remove(semi_circle2)
+
+        # Expand the right half while continuously drawing a connector so the path never "breaks"
+        connector = always_redraw(
+            lambda: Line(
+            semi_circle2_left.get_end(),
+            semi_circle2_right.get_start(),
+            color=ORANGE,
+            )
+        )
+        self.add(connector)
+
+        self.play(
+            semi_circle2_right.animate.shift(0.5 * RIGHT),
+            run_time=0.75,
+            rate_func=smooth,
+        )
+
+
+        # Continue with the turn
+        self.play(
+            Rotate(
+                uav1,
+                angle=-PI,
+                about_point=end_first_leg_turn_point,
+                rate_func=linear,
+                run_time=2
+            ),
+            Succession(
+                Rotate(
+                    uav2,
+                    angle=-PI / 2,
+                    about_point=end_third_leg_turn_point1,
+                    rate_func=linear,
+                    run_time=1
+                ),
+                ApplyMethod(
+                    uav2.move_to,
+                    end_third_leg_turn_point2 + 0.5 * UP,
+                    rate_func=linear,
+                    run_time=1
+                ),
+                Rotate(
+                    uav2,
+                    angle=-PI / 2,
+                    about_point=end_third_leg_turn_point2,
+                    rate_func=linear,
+                    run_time=1
+                ),
+                # run_time=2
+            )
+        )
+
+
+        self.wait(2)
 
 class SensorGapWhenTurning(BaseScene):
     def construct(self):
