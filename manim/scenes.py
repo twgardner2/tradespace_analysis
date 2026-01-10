@@ -854,20 +854,17 @@ class g_LimitingBeamingCase(BaseScene):
         uav = UAV(fov_width=self.lane_width, fov_deg=75, w_beam_det_fov=True, w_height_det_fov=True)
         self.add(uav)
 
-        # uav.next_to(self.search_box, DOWN, aligned_edge=LEFT, buff=0)
         uav.next_to(self.search_box, DOWN, buff=0)
         uav.shift(self.lane_width * self.N_LANES/2 * LEFT + self.lane_width*0.5*RIGHT)
 
         # Instantiate target
-        # tgt = DesignTarget(debug=True)
         tgt_heading = PI
         tgt = DesignTarget(debug=False)
-        tgt.scale(1.5)
-        tgt.rotate(PI)
-        # tgt.move_to(uav.get_edge_center(UP)).shift(uav.width/2*RIGHT, aligned_edge=LEFT)
+        tgt.scale(2)
+        tgt.rotate(tgt_heading)
         tgt.move_to(uav.get_corner(UR), aligned_edge=LEFT)
         tgt_continuous_animation = always_redraw(
-            lambda: tgt.shift(0.01 * np.array([math.cos(tgt_heading), math.sin(tgt_heading), 0]))
+            lambda: tgt.shift(0.02 * np.array([math.cos(tgt_heading), math.sin(tgt_heading), 0]))
         )
         self.add(tgt)
 
@@ -884,14 +881,17 @@ class g_LimitingBeamingCase(BaseScene):
             Succession(
                 # 1. Shift upwards
                 ApplyMethod(uav.move_to, end_first_leg, rate_func=linear),
-                
+
                 # 2. Rotate
                 Rotate(
-                    uav, 
-                    angle=-PI, 
+                    uav,
+                    angle=-PI,
                     about_point=turn_rotation_point,
                     rate_func=linear
                 ),
+
+                # 3. Align the DOWN (bottom) edge of the uav to the DOWN edge of the search_box
+                ApplyMethod(uav.align_to, self.search_box, DOWN, rate_func=linear),
             )
         )
         self.wait(2)
