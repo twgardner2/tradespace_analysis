@@ -19,6 +19,20 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "h_LimitingGlancingCase",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "manim",
+            "args": [
+                "--config_file",
+                "./manim/manim.cfg",
+                "./manim/scenes.py",
+                "h_LimitingGlancingCase" // Scene to debug
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
