@@ -841,6 +841,14 @@ class LimitingBeamingCase(BaseScene):
 
     def construct(self):
 
+        # Set camera view
+        orig_height = self.camera.frame_height
+        orig_width  = self.camera.frame_width
+
+        self.camera.frame_height = 7
+        self.camera.frame_width  = self.camera.frame_height * orig_width/orig_height
+        self.camera.frame_center = [0, -2, 0]
+
         # Add UAV and it's FOV
         uav = UAV(fov_width=self.lane_width, fov_deg=75, w_beam_det_fov=True, w_height_det_fov=True)
         self.add(uav)
