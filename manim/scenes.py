@@ -837,58 +837,53 @@ class ShortLateralOffsetTurn(BaseScene):
 
 
 class LimitingBeamingCase(BaseScene):
-                
-        #         # 2. Rotate
-        #         Rotate(
-        #             uav_group, 
-        #             angle=-PI, 
-        #             about_point=first_rotation_point,
-        #             rate_func=linear
-        #         ),
-        #     )
-        # )
 
-        self.play(r.animate.set_value(1.0))
-        self.play(r.animate.set_value(0.8))
-        self.play(r.animate.set_value(2.0))
-        self.play(r.animate.set_value(1.0))
-        # End the animation
-        self.wait(10)
-
-
-
-class LimitingBeamCase(BaseScene):
 
     def construct(self):
 
         # Add UAV and it's FOV
-        uav_group = UAV(fov_width=self.lane_width, fov_deg=35, w_beam_det_fov=True)
-        self.add(uav_group)
+        uav = UAV(fov_width=self.lane_width, fov_deg=75, w_beam_det_fov=True, w_height_det_fov=True)
+        self.add(uav)
 
-        # uav_group.next_to(self.search_area, DOWN, aligned_edge=LEFT, buff=0)
-        uav_group.next_to(self.search_area, DOWN, buff=0)
-        uav_group.shift(self.lane_width * self.N_LANES/2 * LEFT + self.lane_width*0.5*RIGHT)
+        # uav.next_to(self.search_box, DOWN, aligned_edge=LEFT, buff=0)
+        uav.next_to(self.search_box, DOWN, buff=0)
+        uav.shift(self.lane_width * self.N_LANES/2 * LEFT + self.lane_width*0.5*RIGHT)
 
         # Instantiate target
-        tgt = DesignTarget(debug=True)
-        tgt.rotate(math.pi/2)
-        # tgt.move_to(uav_group.get_edge_center(UP)).shift(uav_group.width/2*RIGHT, aligned_edge=LEFT)
-        tgt.move_to(uav_group.get_corner(UR), aligned_edge=LEFT)
+        # tgt = DesignTarget(debug=True)
+        tgt_heading = PI
+        tgt = DesignTarget(debug=False)
+        tgt.scale(1.5)
+        tgt.rotate(PI)
+        # tgt.move_to(uav.get_edge_center(UP)).shift(uav.width/2*RIGHT, aligned_edge=LEFT)
+        tgt.move_to(uav.get_corner(UR), aligned_edge=LEFT)
+        tgt_continuous_animation = always_redraw(
+            lambda: tgt.shift(0.01 * np.array([math.cos(tgt_heading), math.sin(tgt_heading), 0]))
+        )
         self.add(tgt)
 
-        # End the animation
-        self.wait(20)
+
+        dist_top_uav_to_center_group = uav.get_center() - uav.uav.get_top() 
+        start_first_leg     = ((2+dist_top_uav_to_center_group)*DOWN + 1.5*LEFT   )
+        end_first_leg       = ( (1+dist_top_uav_to_center_group)*UP + 1.5*LEFT)
+        turn_rotation_point = ( 1*UP + 1*LEFT            )
+        end_second_leg      = ((3+dist_top_uav_to_center_group)*DOWN + 1.5*RIGHT) 
 
 
+        # Animation
+        self.play(
+            Succession(
+                # 1. Shift upwards
+                ApplyMethod(uav.move_to, end_first_leg, rate_func=linear),
+                
+                # 2. Rotate
+                Rotate(
+                    uav, 
+                    angle=-PI, 
+                    about_point=turn_rotation_point,
+                    rate_func=linear
+                ),
+            )
+        )
+        self.wait(2)
 
-    def construct(self):
-        ship = SVGMobject('./www/frigate.svg')
-        ship.scale(2)
-        # ship.set_color(GRAY)
-
-        self.play(Create(ship))
-        ship.center()
-        stern = ship.get_left()
-        # self.play(ship.animate.rotate(PI), about_point=stern)
-        self.play(ship.animate.rotate(PI), axis=UP)
-        self.wait(10)
