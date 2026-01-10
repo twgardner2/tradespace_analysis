@@ -479,6 +479,7 @@ class c_DetectionRangesWGraph(Scene):
 class d_SemiCircleTurn(BaseSceneSemiCircleTurn):
     def construct(self):
         
+        # Set camera view
         orig_height = self.camera.frame_height
         orig_width  = self.camera.frame_width
 
