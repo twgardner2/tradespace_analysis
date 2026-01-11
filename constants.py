@@ -110,16 +110,7 @@ class Aircraft:
             float: aircraft cost in millions of dollars.
         '''
         
-        match self.sensor:
-            case Sensor.LOW:
-                sensor_cost = 0.05
-            case Sensor.MED:
-                sensor_cost = 1
-            case Sensor.HIGH:
-                sensor_cost = 10
-
-
-        return 50*self.mach**2 - 35*self.mach + 0.03*self.alt_kft**2 - 0.2*self.alt_kft + 11 + sensor_cost
+        return 50*self.mach**2 - 35*self.mach + 0.03*self.alt_kft**2 - 0.2*self.alt_kft + 11 + self.sensor_assumption.cost
 
 
     def __post_init__(self):
